@@ -35,7 +35,7 @@ setup(
         'click==7.1.2',
         'tabulate==0.9.0',
         'PyYAML==6.0.1',
-        'requests==2.31.0',
+        'requests==2.32.0',
         'prettytable==3.9.0'
     ],
     entry_points=f'''
