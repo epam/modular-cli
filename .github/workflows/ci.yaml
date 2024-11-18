@@ -9,6 +9,7 @@ jobs:
   Release:
     name: Release
     runs-on: ubuntu-latest
+    environment: release
     permissions:
       contents: write
 
@@ -79,3 +80,4 @@ jobs:
           prerelease: false
           draft: false
           make_latest: true
+          token: ${{ secrets.RELEASE_TOKEN }}
