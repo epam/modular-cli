@@ -21,7 +21,8 @@ BOOL_PARAM_MAP = {
 
 def validate_params(appropriate_command, passed_parameters):
     missed_param = [
-        param[NAME] for param in appropriate_command[PARAMS]
+        f"{param[NAME]} or {param[ALIAS]}" if param[ALIAS] is not None else param[NAME]
+        for param in appropriate_command[PARAMS]
         if param[REQUIRED] and param[NAME] not in passed_parameters
     ]
 

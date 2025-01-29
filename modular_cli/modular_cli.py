@@ -55,7 +55,15 @@ def modular_cli(
     resource, method, parameters, params_to_log = prepare_request(
         token_meta=token_meta, passed_parameters=parameters,
     )
-    adapter_sdk = handle_token_expiration(init_configuration())
+    adapter_sdk = init_configuration()
+    if adapter_sdk:
+        adapter_sdk = handle_token_expiration(adapter_sdk)
+    if adapter_sdk is None:
+        return CommandResponse(
+            message="The configuration is missing. "
+                    "Use 'modular-cli setup' command first",
+            code=401,
+        )
 
     response = adapter_sdk.execute_command(
         resource=resource, parameters=parameters,
@@ -88,7 +96,7 @@ def __is_help_required(token_meta, specified_parameters, help_flag):
     return required_parameters and not specified_parameters
 
 
-def handle_token_expiration(adapter_sdk: AdapterClient) -> AdapterClient:
+def handle_token_expiration(adapter_sdk: AdapterClient) -> AdapterClient | None:
     """
     Tries to refresh access token. Returns new adapter client. Can return
     the save object or new object
