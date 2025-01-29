@@ -80,3 +80,4 @@ jobs:
           prerelease: false
           draft: false
           make_latest: true
+          token: ${{ secrets.RELEASE_TOKEN }}
