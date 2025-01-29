@@ -356,6 +356,12 @@ class LoginCommandHandler(AbstractStaticCommands):
     def execute_command(self):
         from modular_cli.service.decorators import CommandResponse, process_meta
         adapter_sdk = init_configuration()
+        if adapter_sdk is None:
+            return CommandResponse(
+                message="The configuration is missing. "
+                        "Use 'modular-cli setup' command first",
+                code=401,
+            )
         server_response = adapter_sdk.login()
         match server_response.status_code:
             case HTTPStatus.OK:

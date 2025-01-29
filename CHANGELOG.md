@@ -1,6 +1,15 @@
 CHANGELOG
 =========
 
+# [2.3.3] - 2024-11-12
+* Update output message to include alias if it exists when required parameters are missing
+
+# [2.3.2] - 2024-10-31
+* Fix bug `NoneType` object has no attribute `login` if configuration is missing
+
+# [2.3.1] - 2024-10-29
+* Update `README.md` file for `PYPI`
+
 # [2.3.0] - 2024-09-20
 * Fix output of `modular-cli version` command
 
