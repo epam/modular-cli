@@ -95,7 +95,7 @@ def process_suggestions(request, meta):
                 if specified_param not in suggestions.keys():
                     for suggested_param in suggestions.keys():
                         if suggested_param.startswith(specified_param) \
-                                and not specified_param == suggested_param:
+                                and specified_param != suggested_param:
                             updated_suggestions[
                                 suggested_param] = suggestions.get(
                                 suggested_param)

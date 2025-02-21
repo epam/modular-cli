@@ -1,6 +1,14 @@
 CHANGELOG
 =========
 
+# [2.3.5] - 2025-02-06
+* Add `MISSING_CONFIGURATION_MESSAGE` constant for error handling
+[EPMCEOOS-6591]:
+* Fix code based on SonarQube recommendations
+
+# [2.3.4] - 2025-01-08
+* Add ability to hide and input parameters interactively by supporting `interactive_settings`
+
 # [2.3.3] - 2024-11-12
 * Update output message to include alias if it exists when required parameters are missing
 

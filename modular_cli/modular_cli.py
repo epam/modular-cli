@@ -15,7 +15,9 @@ from modular_cli.service.utils import find_token_meta
 from modular_cli.utils.exceptions import ModularCliInternalException
 from modular_cli.service.utils import JWTToken
 from modular_cli.utils.logger import get_logger
-from modular_cli.utils.variables import NO_CONTENT_RESPONSE_MESSAGE
+from modular_cli.utils.variables import (
+    NO_CONTENT_RESPONSE_MESSAGE, MISSING_CONFIGURATION_MESSAGE,
+)
 from modular_cli.service.adapter_client import AdapterClient
 
 CONTEXT_SETTINGS = dict(allow_extra_args=True, ignore_unknown_options=True)
@@ -60,8 +62,7 @@ def modular_cli(
         adapter_sdk = handle_token_expiration(adapter_sdk)
     if adapter_sdk is None:
         return CommandResponse(
-            message="The configuration is missing. "
-                    "Use 'modular-cli setup' command first",
+            message=MISSING_CONFIGURATION_MESSAGE,
             code=401,
         )
 

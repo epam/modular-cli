@@ -17,7 +17,9 @@ from modular_cli.service.config import (
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.utils import save_meta_to_file, MODULAR_CLI_META_DIR
-from modular_cli.utils.variables import M3ADMIN_MODULE
+from modular_cli.utils.variables import (
+    M3ADMIN_MODULE, MISSING_CONFIGURATION_MESSAGE,
+)
 from modular_cli.utils.exceptions import (
     ModularCliBadRequestException, ModularCliInternalException,
 )
@@ -358,8 +360,7 @@ class LoginCommandHandler(AbstractStaticCommands):
         adapter_sdk = init_configuration()
         if adapter_sdk is None:
             return CommandResponse(
-                message="The configuration is missing. "
-                        "Use 'modular-cli setup' command first",
+                message=MISSING_CONFIGURATION_MESSAGE,
                 code=401,
             )
         server_response = adapter_sdk.login()

@@ -1,5 +1,6 @@
 import os
 from base64 import b64encode
+import getpass
 
 from modular_cli.utils.exceptions import ModularCliBadRequestException
 
@@ -133,19 +134,22 @@ def resolve_passed_files(command, params):
     return params
 
 
-def process_input_parameters(token_meta, passed_parameters):
+def process_input_parameters(
+        token_meta: dict,
+        passed_parameters: list,
+) -> dict:
     index = 0
     processed_parameters = {}
     for idx, param in enumerate(passed_parameters):
         if idx < index:
             continue
-
-        existed_param = [parameter for parameter in token_meta['parameters']
-                         if f'-{parameter["alias"]}' == param or
-                         f'--{parameter["name"]}' == param]
+        existed_param = [
+            parameter for parameter in token_meta['parameters']
+            if f'-{parameter["alias"]}' == param or
+               f'--{parameter["name"]}' == param
+        ]
         if not existed_param:
-            raise ModularCliBadRequestException(f"No such option: "
-                                                  f"\'{param}\'")
+            raise ModularCliBadRequestException(f"No such option: '{param}'")
 
         existed_param = existed_param[0]
 
@@ -170,8 +174,7 @@ def process_input_parameters(token_meta, passed_parameters):
                     )
             except IndexError:
                 raise ModularCliBadRequestException(
-                    f'Missed value for "{param}" parameter. '
-                    f'Bool type expected'
+                    f'Missed value for "{param}" parameter. Bool type expected'
                 )
         elif param_name in processed_parameters:
             # process multiple parameter type
@@ -196,19 +199,53 @@ def process_input_parameters(token_meta, passed_parameters):
                 )
             index += 2
 
+    prompts_map = {
+        parameter['name']: parameter['interactive_settings']
+        for parameter in token_meta['parameters']
+        if parameter.get('interactive_settings')
+    }
+
+    for prompt_name, interactive_settings in prompts_map.items():
+        if prompt_name not in processed_parameters:
+            continue
+        target_option = interactive_settings['target_option']
+        if target_option in processed_parameters:
+            raise ModularCliBadRequestException(
+                f"Conflict: both '{prompt_name}' and '{target_option}' are "
+                f"present in processed_parameters"
+            )
+
+        prompt_text = interactive_settings['prompt_text']
+        hide_input = interactive_settings['hide_input']
+
+        if processed_parameters[prompt_name]:
+            if hide_input:
+                user_input = getpass.getpass(f"{prompt_text}: ")
+            else:
+                user_input = input(f"{prompt_text}: ")
+            processed_parameters[target_option] = user_input
+
+        del processed_parameters[prompt_name]
+
     return processed_parameters
 
 
-def prepare_request(token_meta, passed_parameters):
+def prepare_request(
+        token_meta: dict,
+        passed_parameters: list,
+) -> tuple:
     passed_parameters = process_input_parameters(
         token_meta=token_meta,
-        passed_parameters=passed_parameters
+        passed_parameters=passed_parameters,
     )
-
-    passed_parameters = resolve_passed_files(command=token_meta,
-                                             params=passed_parameters)
+    passed_parameters = resolve_passed_files(
+        command=token_meta,
+        params=passed_parameters,
+    )
     validate_params(token_meta, passed_parameters)
-    params_to_log = resolve_secure_parameters(command=token_meta,
-                                              params=passed_parameters)
+    params_to_log = resolve_secure_parameters(
+        command=token_meta,
+        params=passed_parameters,
+    )
     route = token_meta[ROUTE]
     return route[PATH], route[METHOD], passed_parameters, params_to_log
