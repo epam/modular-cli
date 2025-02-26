@@ -20,3 +20,6 @@ ENV_CLI_DEBUG = 'MODULAR_CLI_DEBUG'
 
 
 M3ADMIN_MODULE = 'm3admin'
+
+MISSING_CONFIGURATION_MESSAGE = \
+    "The configuration is missing. Use 'modular-cli setup' command first"
