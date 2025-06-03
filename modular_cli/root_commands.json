@@ -21,6 +21,13 @@
       }
     }
   },
+  "health_check": {
+    "description": "Usage: $entry_point_name health_check\n\nReturns service health status",
+    "body": {
+      "parameters": {
+      }
+    }
+  },
   "setup": {
     "description": "Configure Modular-CLI.",
     "body": {

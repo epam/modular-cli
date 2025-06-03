@@ -1,11 +1,12 @@
 import os
-import subprocess
+import shellingham
 import sys
 
+from modular_cli import ENTRY_POINT
 from modular_cli.modular_cli_autocomplete import (
     BASH_COMPLETE_SCRIPT, ZSH_COMPLETE_SCRIPT, RELATIVE_PATH_TO_COMPLETE,
     PROFILE_D_PATH, PROFILE_ZSH_COMPLETE_SCRIPT, PROFILE_BASH_COMPLETE_SCRIPT,
-    COMPLETE_PROCESS_FILE,
+    COMPLETE_PROCESS_FILE, TEMP_HELP_FILE,
 )
 from modular_cli.utils.logger import get_logger
 
@@ -16,6 +17,7 @@ HELP_FILE = 'HELP_FILE'
 BASH_INTERPRETER = 'bash'
 ZSH_INTERPRETER = 'zsh'
 COMMAND_TO_CHECK_INTERPRETER = "echo $SHELL"
+SUPPORTED_SHELLS = [BASH_INTERPRETER, ZSH_INTERPRETER]
 SHRC_AUTOCOMPLETE_MARKER = 'admin_autocomplete_system_settings'
 
 
@@ -38,9 +40,10 @@ def _add_str_to_rc_file(interpreter, script, admin_home_path,
         if SHRC_AUTOCOMPLETE_MARKER not in f.read():
             f.write(f'\n# {SHRC_AUTOCOMPLETE_MARKER}')
             f.write(source_string)
-            _LOG.info(f'Modular-CLI autocomplete have been '
-                      f'successfully injected to the RC file. '
-                      f'Path to the RC file: {rc_file_path}')
+            _LOG.info(
+                f"Autocomplete for '{ENTRY_POINT}' has been successfully "
+                f"injected to the RC file: {rc_file_path}"
+            )
     return source_string
 
 
@@ -59,35 +62,63 @@ def _delete_str_from_rc_file(interpreter):
                 first_string_found = False
                 continue
             f.write(line)
-    _LOG.info(f'Modular-CLI autocomplete have been '
-              f'successfully removed from the RC file. ')
+    _LOG.info(
+        f"Autocomplete for '{ENTRY_POINT}' has been successfully removed from "
+        f"the RC file: {rc_file_path}"
+    )
 
 
-def _get_interpreter_and_appropriate_script():
+def _get_interpreter_and_appropriate_script(
+        shell_name: str | None = None,
+) -> tuple:
     if sys.platform not in ['darwin', 'linux']:
         raise OSError(
             f'The OS is not applicable for autocompletion setup. '
             f'Current OS is {sys.platform}'
         )
-    stdout = subprocess.check_output(COMMAND_TO_CHECK_INTERPRETER,
-                                     shell=True).decode('utf-8').strip()
-    _LOG.info(f'Current interpreter: {stdout}')
-    if not stdout:
-        raise RuntimeError(
-            'The interpreter can not be checked. Modular-CLI autocomplete '
-            'installation will be skipped...'
-        )
-    interpreter, script = _get_appropriate_script_name(stdout)
+
+    if shell_name is not None:
+        if shell_name not in SUPPORTED_SHELLS:
+            raise ValueError(
+                f'Provided shell "{shell_name}" is unsupported. '
+                f'Supported shells are: {SUPPORTED_SHELLS}'
+            )
+        _LOG.info(f'Using provided interpreter: {shell_name}')
+        interpreter = shell_name
+    else:  # Auto-detection logic
+        try:
+            detected_shell, shell_path = shellingham.detect_shell()
+            if detected_shell not in SUPPORTED_SHELLS:
+                raise ValueError(
+                    f'Detected shell "{detected_shell}" is unsupported. '
+                    f'Supported shells are: {SUPPORTED_SHELLS}'
+                )
+            interpreter = detected_shell
+            _LOG.info(
+                f'Detected interpreter: {detected_shell}, path: {shell_path}'
+            )
+        except shellingham.ShellDetectionFailure:
+            _LOG.warning(
+                "Shell detection failed. Unable to detect current interpreter. "
+                f"Autocomplete for '{ENTRY_POINT}' will be skipped"
+            )
+            raise RuntimeError(
+                "The interpreter cannot be checked. Autocomplete for "
+                f"'{ENTRY_POINT}' will be skipped"
+            )
+
+    interpreter, script = _get_appropriate_script_name(interpreter)
     if not interpreter:
         raise ValueError(
-            f'Unsupported interpreter {stdout}. Modular-CLI autocomplete '
-            f'installation will be skipped...'
+            f"Unsupported interpreter '{interpreter}'. Autocomplete for "
+            f"'{ENTRY_POINT}' will be skipped"
         )
     return interpreter, script
 
 
-def enable_autocomplete_handler():
-    interpreter, script = _get_interpreter_and_appropriate_script()
+def enable_autocomplete_handler(shell: str | None = None) -> str:
+    interpreter, script = \
+        _get_interpreter_and_appropriate_script(shell_name=shell)
     from platform import python_version
     installed_python_link = 'python' + '.'.join(
         python_version().lower().split('.')[0:-1])
@@ -112,6 +143,9 @@ def enable_autocomplete_handler():
         python_script = os.path.join(admin_home_path,
                                      RELATIVE_PATH_TO_COMPLETE,
                                      COMPLETE_PROCESS_FILE)
+        tmp_help_file = os.path.join(
+            admin_home_path, RELATIVE_PATH_TO_COMPLETE, TEMP_HELP_FILE,
+        )
         script = 'profile_' + script
         processed_profile_script_path = os.path.join(PROFILE_D_PATH, script)
         with open(init_profile_script_path, 'r+') as f:
@@ -120,20 +154,19 @@ def enable_autocomplete_handler():
         help_was_found = False
         with open(processed_profile_script_path, 'w') as f:
             for line in lines:
-                if SCRIPT_PATH in line.strip(
-                        "\n") and not script_was_found:
+                if SCRIPT_PATH in line.strip("\n") and not script_was_found:
                     line = f'SCRIPT_PATH={python_script}\n'
                     script_was_found = True
                 if HELP_FILE in line.strip("\n") and not help_was_found:
-                    line = 'HELP_FILE=/home/$USER/modular_cli_help.txt'
+                    line = f'HELP_FILE={tmp_help_file}\n'
                     help_was_found = True
                 f.write(line)
-        _LOG.info(f'Modular-CLI autocomplete has been '
-                  f'successfully set up. Path to the "profile.d" file: '
-                  f'{processed_profile_script_path}')
-        return f'Modular-CLI autocomplete has been ' \
-               f'successfully set up. Path to the "profile.d" file: ' \
-               f'{processed_profile_script_path}'
+        message = (
+            f"Autocomplete for '{ENTRY_POINT}' has been successfully set up. "
+            f"Path to the 'profile.d' file: {processed_profile_script_path}"
+        )
+        _LOG.info(message)
+        return message
     except AttributeError:
         _LOG.error('Autocomplete installation is not available')
         raise
@@ -155,7 +188,7 @@ def disable_autocomplete_handler():
                     PROFILE_BASH_COMPLETE_SCRIPT,
                 ]:
                     os.remove(os.path.join(PROFILE_D_PATH, each))
-        return 'Modular-CLI autocomplete has been successfully deleted'
+        return f"Autocomplete for '{ENTRY_POINT}' has been successfully removed"
     except Exception as e:
         _LOG.error(f'Something happened while removing autocomplete. Reason: {e}')
         raise

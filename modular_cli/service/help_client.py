@@ -29,9 +29,11 @@ from modular_cli.service.config import ConfigurationProvider
 META_JSON = 'commands_meta.json'
 ROOT_META_JSON = 'root_commands.json'
 
-HELP_STUB = 'Here are the commands supported by the current version ' \
-            'of Modular-CLI. \nIMPORTANT: The scope of commands you ' \
-            'can execute depends on your user permissions.'
+HELP_STUB = (
+    f'Here are the commands supported by the current version of {ENTRY_POINT}. '
+    f'\nIMPORTANT: The scope of commands you can execute depends on your user '
+    f'permissions'
+)
 
 GENERAL_HELP_STRING = """Description: {help_stub}
 Usage: {entry_point} [module] group [subgroup] command [parameters]
@@ -415,6 +417,30 @@ class LoginCommandHandler(AbstractStaticCommands):
                 )
 
 
+class HealthCheckCommandHandler(AbstractStaticCommands):
+    def define_description(self):
+        login_command_help = (
+            f'Usage: {ENTRY_POINT} health_check{os.linesep}'
+            f'Returns service health status'
+        )
+        click.echo(login_command_help)
+        exit()
+
+    def execute_command(self):
+        from modular_cli.service.decorators import CommandResponse
+        adapter_sdk = init_configuration()
+        if adapter_sdk is None:
+            return CommandResponse(
+                message=MISSING_CONFIGURATION_MESSAGE,
+                code=401,
+            )
+        server_response = adapter_sdk.health_check()
+        response_body = server_response.json()
+        return CommandResponse(
+            **response_body, code=server_response.status_code,
+        )
+
+
 class CleanupCommandHandler(AbstractStaticCommands):
     def define_description(self):
         cleanup_command_help = f'{os.linesep}Usage: {ENTRY_POINT} cleanup' \
@@ -431,18 +457,27 @@ class CleanupCommandHandler(AbstractStaticCommands):
 
 class EnableAutocompleteCommandHandler(AbstractStaticCommands):
     def define_description(self):
-        enable_autocomplete_command_help = f'{os.linesep}Usage: {ENTRY_POINT} ' \
-                                           f'(then press tab)' \
-                                           f'{os.linesep}{os.linesep} Gives' \
-                                           f' you suggestions ' \
-                                           f'to complete your command.'
+        enable_autocomplete_command_help = (
+            f'{os.linesep}Usage: {ENTRY_POINT} (then press tab){os.linesep}'
+            f'{os.linesep}Enables command auto-completion suggestions as you type'
+            f'{os.linesep}Parameters:{os.linesep}     '
+            f'--shell   Specify your shell type (bash/zsh). '
+            f'If omitted, will attempt to detect your shell automatically'
+        )
         click.echo(enable_autocomplete_command_help)
         exit()
 
     def execute_command(self):
         from modular_cli.service.decorators import CommandResponse
-
-        response = enable_autocomplete_handler()
+        configure_args = {'--shell': (False, str)}
+        _force_help = False
+        for param_name, is_required in configure_args.items():
+            if param_name in self.config_params:
+                _force_help = False
+        if _force_help:
+            self.define_description()
+        shell, *_ = self.validate_params(configure_args=configure_args)
+        response = enable_autocomplete_handler(shell=shell)
         return CommandResponse(message=response)
 
 

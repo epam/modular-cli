@@ -1,7 +1,10 @@
+import os
 import sys
 from json import JSONDecodeError
 from http import HTTPStatus
 import click
+
+from modular_cli import ENTRY_POINT
 from modular_cli.service.decorators import (
     dynamic_dispatcher, CommandResponse, ResponseDecorator,
 )
@@ -12,7 +15,9 @@ from modular_cli.service.config import ConfigurationProvider, add_data_to_config
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.request_processor import prepare_request
 from modular_cli.service.utils import find_token_meta
-from modular_cli.utils.exceptions import ModularCliInternalException
+from modular_cli.utils.exceptions import (
+    ModularCliInternalException, ModularCliUnauthorizedException,
+)
 from modular_cli.service.utils import JWTToken
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
@@ -102,19 +107,30 @@ def handle_token_expiration(adapter_sdk: AdapterClient) -> AdapterClient | None:
     Tries to refresh access token. Returns new adapter client. Can return
     the save object or new object
     """
-    at = adapter_sdk.session_token
-    if at and not JWTToken(at).is_expired():
+    st = adapter_sdk.session_token
+    rt = ConfigurationProvider().refresh_token
+    if (not st or JWTToken(st).is_expired()) \
+            and (not rt or JWTToken(rt).is_expired()):
+        error_message = (
+            f'The provided tokens have expired or do not exist. Please '
+            f're-login to get new tokens `{ENTRY_POINT} login`'
+        )
+        raise ModularCliUnauthorizedException(error_message)
+
+    if st and not JWTToken(st).is_expired():
         _LOG.debug('Access token has not expired yet. Using it')
         return adapter_sdk
+
     # no access token or expired
-    rt = ConfigurationProvider().refresh_token
     if not rt or JWTToken(rt).is_expired():
         _LOG.debug('Refresh token does not exist or expired. Cannot refresh')
         return adapter_sdk
+
     resp = adapter_sdk.refresh(rt)
     if not resp.ok:
         _LOG.warning(f'Could not refresh token: {resp.text}')
         return adapter_sdk
+
     data = resp.json()
     add_data_to_config(name=CONF_ACCESS_TOKEN, value=data.get('jwt'))
     add_data_to_config(name=CONF_REFRESH_TOKEN, value=data.get('refresh_token'))

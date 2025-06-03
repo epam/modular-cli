@@ -36,7 +36,7 @@ def save_configuration(api_link: str, username: str, password: str) -> str:
                        password=password)
     with open(folder_path / CREDENTIALS_FILE_NAME, 'w') as config_file:
         yaml.dump(config_data, config_file)
-    return 'Great! The Modular-CLI tool has been setup.'
+    return f"Great! The CLI tool '{ENTRY_POINT}' has been set up"
 
 
 def get_credentials_folder() -> Path:
@@ -91,7 +91,7 @@ def clean_up_configuration():
         SYSTEM_LOG.exception(
             f'Error occurred while cleaning '
             f'configuration by path: {folder_path}')
-    return 'The Modular-CLI tool configuration has been deleted.'
+    return f"Configuration for the CLI tool '{ENTRY_POINT}' has been deleted"
 
 
 CONF_USERNAME = 'username'
@@ -110,8 +110,9 @@ class ConfigurationProvider:
         self.config_path = get_credentials_folder() / CREDENTIALS_FILE_NAME
         if not os.path.exists(self.config_path):
             raise ModularCliConfigurationException(
-                f'The Modular-CLI tool is not setup. Please execute the '
-                f'following command: \'{ENTRY_POINT} setup\'')
+                f"The CLI tool is not set up. Please execute the following "
+                f"command: '{ENTRY_POINT} setup'"
+            )
         self.config_dict = None
         with open(self.config_path, 'r') as config_file:
             self.config_dict = yaml.safe_load(config_file.read())
@@ -121,11 +122,12 @@ class ConfigurationProvider:
                 missing_property.append(prop)
         if missing_property:
             raise ModularCliConfigurationException(
-                f'Modular-CLI configuration is broken. '
-                f'The following properties are '
-                f'required but missing: {missing_property}')
+                f"Configuration for '{ENTRY_POINT}' is broken. The following "
+                f"required properties are missing: {missing_property}"
+            )
         SYSTEM_LOG.info(
-            f'Modular-CLI configuration has been loaded')
+            f"Configuration for '{ENTRY_POINT}' has been successfully loaded"
+        )
 
     @property
     def api_link(self):
@@ -175,10 +177,10 @@ def add_data_to_config(name: str, value: str):
     #  i get error - silly
     config_file_path = get_credentials_folder() / CREDENTIALS_FILE_NAME
     if not Path(config_file_path).exists():
-        SYSTEM_LOG.exception(f'Modular-CLI tool is not configured. Please '
-                             f'contact the support team.')
-        return 'Modular-CLI tool is not configured. Please contact the ' \
-               'support team.'
+        message = \
+            f"'{ENTRY_POINT}' is not configured. Please contact the support team"
+        SYSTEM_LOG.exception(message)
+        return message
     with open(config_file_path, 'r') as config_file:
         config = yaml.safe_load(config_file.read())
     config[name] = value
