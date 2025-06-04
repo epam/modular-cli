@@ -16,7 +16,7 @@ from modular_cli.service.config import (
 from modular_cli.service.help_client import (
     SetupCommandHandler, LoginCommandHandler, CleanupCommandHandler,
     EnableAutocompleteCommandHandler, DisableAutocompleteCommandHandler,
-    VersionCommandHandler,
+    VersionCommandHandler, HealthCheckCommandHandler,
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.utils.exceptions import (
@@ -132,8 +132,7 @@ def dynamic_dispatcher(func):
                 view_type = TABLE_VIEW
             if ctx.params.get(JSON_VIEW):
                 view_type = JSON_VIEW
-            if ctx.args[0] in ['setup', 'login', 'cleanup', 'version',
-                               'enable_autocomplete', 'disable_autocomplete']:
+            if ctx.args[0] in CONFIG_COMMAND_HANDLER_MAPPING.keys():
                 response = configuration_executor(
                     config_command=ctx.args[0],
                     config_command_help=ctx.params['help'],
@@ -187,7 +186,8 @@ CONFIG_COMMAND_HANDLER_MAPPING = {
     'cleanup': CleanupCommandHandler,
     'enable_autocomplete': EnableAutocompleteCommandHandler,
     'disable_autocomplete': DisableAutocompleteCommandHandler,
-    'version': VersionCommandHandler
+    'version': VersionCommandHandler,
+    'health_check': HealthCheckCommandHandler,
 }
 
 

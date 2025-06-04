@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+# [2.3.9] - 2025-04-25
+* Fix the path to the help file for containers
+* Update code to use dynamic `ENTRY_POINT` instead of static `modular-cli` for logging, exception handling, and messages
+
+# [2.3.8] - 2025-04-15
+* Fix shell detection in containers for `m3admin enable_autocomplete` command
+* Add library `shellingham==1.5.4`
+* Add `--shell` parameter to the `enable_autocomplete` command
+
+# [2.3.7] - 2025-03-25
+* Add `health_check` command
+
+# [2.3.6] - 2025-02-25
+[EPMCEOOS-6631]:
+* Improve re-login help message and handled token expiration in CLI
+
 # [2.3.5] - 2025-02-06
 * Add `MISSING_CONFIGURATION_MESSAGE` constant for error handling
 [EPMCEOOS-6591]:

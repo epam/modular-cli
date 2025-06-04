@@ -85,6 +85,12 @@ class AdapterClient:
             payload={"refresh_token": refresh_token},
         )
 
+    def health_check(self) -> requests.Response:
+        return self.__make_request(
+            resource='/health_check',
+            method=HTTP_GET,
+        )
+
     def execute_command(
             self,
             resource: str,

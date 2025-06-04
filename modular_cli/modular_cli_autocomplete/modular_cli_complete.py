@@ -5,6 +5,8 @@ import re
 
 from pathlib import Path
 
+
+RELATIVE_PATH_TO_COMPLETE = 'modular_cli_autocomplete'
 NO_DESCRIPTION = 'No description'
 HELP = 'help'
 BASH_INTERPRETER = 'bash'
@@ -113,7 +115,10 @@ def process_suggestions(request, meta):
 
 
 def format_response(suggestions):
-    help_file = os.path.join(str(Path.home()), HELP_FILE)
+    admin_home_path = Path(__file__).parent.parent.resolve()
+    help_file = os.path.join(
+        admin_home_path, RELATIVE_PATH_TO_COMPLETE, HELP_FILE,
+    )
     if isinstance(suggestions, list):
         with open(help_file, 'w+') as result_file:
             result_file.write(f'{os.linesep}'.join(sorted(suggestions)))

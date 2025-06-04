@@ -56,7 +56,7 @@ class JWTToken:
 
     def is_expired(self) -> bool:
         p = self.payload
-        if not p:
+        if p is None:
             return True
         exp = p.get('exp')
         if not exp:

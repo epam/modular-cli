@@ -1,5 +1,8 @@
 # new tool folder name is '.m3modularcli'. It's resolved dynamically
 # keeping backward compatibility
+from modular_cli import ENTRY_POINT
+
+
 TOOL_FOLDER_NAME = 'm3modularcli'  # obsolete
 TOOL_CONFIGURATION_FOLDER = '.modular_cli'  # new
 LOG_FILE_NAME = 'modular_cli.log'
@@ -22,4 +25,4 @@ ENV_CLI_DEBUG = 'MODULAR_CLI_DEBUG'
 M3ADMIN_MODULE = 'm3admin'
 
 MISSING_CONFIGURATION_MESSAGE = \
-    "The configuration is missing. Use 'modular-cli setup' command first"
+    f"The configuration is missing. Use '{ENTRY_POINT} setup' command first"
