@@ -1,7 +1,7 @@
-from abc import ABC
+from typing import Type
 
 
-class ModularCliBaseException(ABC, Exception):
+class ModularCliBaseException(Exception):
     """
     Base Modular-CLI exception
     """
@@ -75,6 +75,12 @@ class ModularCliInternalException(ModularCliBaseException):
     code = 500
 
 
+class ModularCliNotImplementedException(ModularCliBaseException):
+    """
+    Modular-CLI requested functionality that is not implemented by the server
+    """
+    code = 501
+
 class ModularCliBadGatewayException(ModularCliBaseException):
     """
     Modular-CLI obtained the Error message from 3rd party application it is
@@ -99,16 +105,9 @@ class ModularCliUpdateRequiredException(ModularCliBaseException):
     code = 426
 
 
-HTTP_CODE_EXCEPTION_MAPPING = {
-    400: ModularCliBadRequestException,
-    401: ModularCliUnauthorizedException,
-    403: ModularCliForbiddenException,
-    404: ModularCliNotFoundException,
-    408: ModularCliTimeoutException,
-    409: ModularCliConflictException,
-    426: ModularCliUpdateRequiredException,
-    500: ModularCliInternalException,
-    502: ModularCliBadGatewayException,
-    503: ModularCliServiceTemporaryUnavailableException,
-    504: ModularCliGatewayTimeoutException
+# Dynamically create mapping from all ModularCliBaseException subclasses
+HTTP_CODE_EXCEPTION_MAPPING: dict[int, Type[ModularCliBaseException]] = {
+    exc_class.code: exc_class
+    for exc_class in ModularCliBaseException.__subclasses__()
+    if hasattr(exc_class, 'code') and isinstance(exc_class.code, int)
 }

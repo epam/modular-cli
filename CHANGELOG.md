@@ -1,6 +1,23 @@
 CHANGELOG
 =========
 
+# [2.3.11] - 2025-08-05
+* HTTP error handling improvements in `modular_cli.utils.exceptions` and `modular_cli.service.decorators`:
+  * Dynamic exception mapping generation using dict comprehension for `HTTP_CODE_EXCEPTION_MAPPING`
+  * Error type resolution in `unpack_error_result_values()`:
+    - Add assertion: `error_code >= 400`
+    - Direct fallback to `HTTPStatus` for unmapped codes
+* Update README.md configuration section to reflect the new installation process
+
+# [2.3.10] - 2025-07-01
+* Update libraries:
+  * `prettytable` from `3.9.0` to `3.16.0`
+  * `PyYAML` from `6.0.1` to `6.0.2`
+  * `requests` from `2.31.0` to `2.32.4`
+* Remove `requirements.txt`
+* Fix `LoginCommandHandler.execute_command()` to handle non-JSON responses when status is
+`HTTPStatus.OK` by catching `json.JSONDecodeError` and returning user-friendly error message
+
 # [2.3.9] - 2025-04-25
 * Fix the path to the help file for containers
 * Update code to use dynamic `ENTRY_POINT` instead of static `modular-cli` for logging, exception handling, and messages

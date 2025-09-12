@@ -17,6 +17,7 @@ from modular_cli.service.config import (
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.utils import save_meta_to_file, MODULAR_CLI_META_DIR
+from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
     M3ADMIN_MODULE, MISSING_CONFIGURATION_MESSAGE,
 )
@@ -25,6 +26,8 @@ from modular_cli.utils.exceptions import (
 )
 from modular_cli.version import __version__
 from modular_cli.service.config import ConfigurationProvider
+
+_LOG = get_logger(__name__)
 
 META_JSON = 'commands_meta.json'
 ROOT_META_JSON = 'root_commands.json'
@@ -166,7 +169,7 @@ class HelpProcessor:
                 level_token_types['command'] = root_command
         for type, names_list in level_token_types.items():
             names = "\n\t".join(sorted(names_list))
-            help = help + f"Available {type}s:\n\t{names}\n"""
+            help = help + f"Available {type}s:\n\t{names}\n"
         return help
 
     def generate_module_meta(self, modules_meta, requested_command):
@@ -369,7 +372,38 @@ class LoginCommandHandler(AbstractStaticCommands):
         match server_response.status_code:
             case HTTPStatus.OK:
                 # -> 200
-                dict_response = json.loads(server_response.text)
+                try:
+                    dict_response = json.loads(server_response.text)
+                except json.JSONDecodeError:
+                    error_msg = (
+                        f"Invalid JSON response from API. Set correct API path "
+                        f"with `{ENTRY_POINT} setup ... --api_path ...`"
+                    )
+                    _LOG.error(f"Login response parsing failed: {error_msg}")
+                    return CommandResponse(
+                        code=HTTPStatus.BAD_REQUEST.value,
+                        message=error_msg,
+                    )
+
+                # Validate required fields
+                required_fields = ['jwt', 'refresh_token', 'version']
+                missing_fields = [
+                    field for field in required_fields
+                    if field not in dict_response
+                ]
+                if missing_fields:
+                    error_msg = (
+                        f"API response missing required fields: "
+                        f"{', '.join(missing_fields)}. "
+                        f"Set correct API path with "
+                        f"`{ENTRY_POINT} setup ... --api_path ...`"
+                    )
+                    _LOG.error(f"Login failed: {error_msg}")
+                    return CommandResponse(
+                        code=HTTPStatus.BAD_REQUEST.value,
+                        message=error_msg,
+                    )
+
                 new_meta = process_meta(
                     server_meta=dict_response.get('meta', {})
                 )

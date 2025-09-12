@@ -43,12 +43,16 @@ environment to protect project against dependency breakage.
 [Content ↑](#content)
 <a name="configuration"></a>
 ## 3. Configuration
-By default - entry point for Modular-CLI set as `modular-cli` and this name will be used 
-in all next commands examples. However, you have ability to customize this name in 
-`setup.py` file before Modular-CLI installation:
-* open `setup.py` file in any convenient editor
-* find property `entry_points` and line `modular-cli=modular_cli.modular_cli:modular_cli` in it
-* replace `modular-cli` keyword with desired name
+By default, the entry point for Modular-CLI is set as `modular-cli` and this name will be used 
+in all next commands examples. However, you have the ability to customize this name using an 
+environment variable during installation:
+* Set the `MODULAR_CLI_ENTRY_POINT` environment variable to your desired command name
+* Install Modular-CLI with the custom entry point:
+
+```bash
+export MODULAR_CLI_ENTRY_POINT=your-custom-name
+pip install .
+```
     
 
 Before first run Modular-CLI should be properly configured. Please create the user
