@@ -143,9 +143,6 @@ def enable_autocomplete_handler(shell: str | None = None) -> str:
         python_script = os.path.join(admin_home_path,
                                      RELATIVE_PATH_TO_COMPLETE,
                                      COMPLETE_PROCESS_FILE)
-        tmp_help_file = os.path.join(
-            admin_home_path, RELATIVE_PATH_TO_COMPLETE, TEMP_HELP_FILE,
-        )
         script = 'profile_' + script
         processed_profile_script_path = os.path.join(PROFILE_D_PATH, script)
         with open(init_profile_script_path, 'r+') as f:
@@ -158,7 +155,7 @@ def enable_autocomplete_handler(shell: str | None = None) -> str:
                     line = f'SCRIPT_PATH={python_script}\n'
                     script_was_found = True
                 if HELP_FILE in line.strip("\n") and not help_was_found:
-                    line = f'HELP_FILE={tmp_help_file}\n'
+                    line = 'HELP_FILE=/home/$USER/modular_cli_help.txt'
                     help_was_found = True
                 f.write(line)
         message = (

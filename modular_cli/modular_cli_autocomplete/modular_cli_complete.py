@@ -115,10 +115,7 @@ def process_suggestions(request, meta):
 
 
 def format_response(suggestions):
-    admin_home_path = Path(__file__).parent.parent.resolve()
-    help_file = os.path.join(
-        admin_home_path, RELATIVE_PATH_TO_COMPLETE, HELP_FILE,
-    )
+    help_file = os.path.join(str(Path.home()), HELP_FILE)
     if isinstance(suggestions, list):
         with open(help_file, 'w+') as result_file:
             result_file.write(f'{os.linesep}'.join(sorted(suggestions)))

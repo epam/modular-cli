@@ -4,6 +4,7 @@ import os
 import shutil
 import sys
 from functools import wraps
+from http import HTTPStatus
 
 import click
 import yaml
@@ -326,17 +327,26 @@ class ResponseFormatter:
     @staticmethod
     def unpack_error_result_values(response_meta: CommandResponse):
         error_code = response_meta.code
-        error_type = HTTP_CODE_EXCEPTION_MAPPING[error_code].__name__
+        assert error_code >= 400, f"Expected error code >= 400, got {error_code}"
         message = response_meta.message
+
+        # 1) Try to get from mapping
+        specific_error_type = HTTP_CODE_EXCEPTION_MAPPING.get(error_code)
+        if specific_error_type:
+            return specific_error_type.__name__, error_code, message
+
+        # 2) If not in mapping, get it from HTTPStatus
+        http_status = HTTPStatus(error_code)
+        error_type = http_status.phrase
         return error_type, error_code, message
 
     def process_cli_view(self, status: str, response_meta: CommandResponse):
         if status == ERROR_STATUS:
-            error_type, error_code, message = self.unpack_error_result_values(
-                response_meta=response_meta)
+            _, _, message = \
+                self.unpack_error_result_values(response_meta=response_meta)
             return f'Error:{os.linesep}{message}'
         elif status == SUCCESS_STATUS:
-            success_code, warnings, message, items, table_title = \
+            _, warnings, message, items, table_title = \
                 self.unpack_success_result_values(response_meta=response_meta)
             if table_title and items:
                 return self.process_table_view(status=status,
@@ -390,15 +400,14 @@ class ResponseFormatter:
             response._max_width = {MODULAR_CLI_STATUS: 10,
                                    MODULAR_CLI_CODE: 5,
                                    MODULAR_CLI_MESSAGE: 70}
-            error_type, error_code, message = self.unpack_error_result_values(
-                response_meta=response_meta)
+            _, error_code, message = \
+                self.unpack_error_result_values(response_meta=response_meta)
             response.add_row([status, error_code, message])
             response = response.__str__()
             return response
         elif status == SUCCESS_STATUS:
-            success_code, warnings, message, items, table_title = \
-                self.unpack_success_result_values(
-                    response_meta=response_meta)
+            success_code, _, message, items, table_title = \
+                self.unpack_success_result_values(response_meta=response_meta)
             if message:
                 response.field_names = [MODULAR_CLI_STATUS,
                                         MODULAR_CLI_CODE,
