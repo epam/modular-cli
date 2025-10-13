@@ -1,6 +1,18 @@
 CHANGELOG
 =========
 
+# [2.3.12] - 2025-09-04
+### Add
+- Support for hidden commands in help system
+- Hidden commands are now properly filtered from group help listings
+- Direct execution and help access for hidden commands when specifically requested
+### Change
+- `HelpProcessor.get_help_message()` now filters out commands with `is_command_hidden` flag from general listings
+- `HelpProcessor.generate_module_meta()` excludes hidden commands from group listings but includes them for specific requests
+### Improve
+- Help system now respects command visibility settings from modular-api
+- Better alignment with Click's native hidden command behavior
+
 # [2.3.11] - 2025-08-05
 * HTTP error handling improvements in `modular_cli.utils.exceptions` and `modular_cli.service.decorators`:
   * Dynamic exception mapping generation using dict comprehension for `HTTP_CODE_EXCEPTION_MAPPING`

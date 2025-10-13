@@ -140,17 +140,38 @@ class HelpProcessor:
     def prepare_command_path(requested_command):
         return '/' + '/'.join(requested_command)
 
+    def _should_show_command(
+            self,
+            command_meta: dict,
+            is_specific_request: bool,
+    ) -> bool:
+        is_hidden = command_meta.get('is_command_hidden', False)
+        # If it's a specific request for this command, show it even if hidden
+        if is_specific_request:
+            return True
+        # For listings, hide commands marked as hidden
+        return not is_hidden
+
     def get_help_message(self, token_meta: dict):
         if token_meta.get('route'):
+            # Specific command help requested - show even if hidden
             return self.prepare_command_help(
                 token_meta=token_meta,
-                specified_tokens=self.requested_command)
+                specified_tokens=self.requested_command,
+            )
 
         level_token_types = {}
         for token_name, value in token_meta.items():
             token_type = value.get('type')
             if token_type is None:
                 token_type = 'command'
+
+            # Check if this is a command and if it should be hidden from listing
+            if token_type == 'command':
+                # For general help listings, skip hidden commands
+                body = value.get('body', {})
+                if body.get('is_command_hidden', False):
+                    continue  # Skip hidden commands in listings
 
             if not level_token_types.get(token_type):
                 level_token_types.update({token_type: []})
@@ -181,6 +202,10 @@ class HelpProcessor:
         existed_command_paths = []
         groups_name = []
 
+        # Check if this is a request for a specific command
+        # (full path with command name) vs a group listing
+        is_specific_command_request = len(requested_command) >= 2
+
         pretty_module_name = requested_command[0]
         module_commands = modules_meta.get(pretty_module_name)
         if not module_commands:
@@ -199,11 +224,21 @@ class HelpProcessor:
 
                 command_name = command_meta['name']
 
+                # Check if command should be shown
+                is_hidden = command_meta.get('is_command_hidden', False)
+
+                # For specific command requests, include even if hidden
+                # For group listings, exclude hidden commands
+                if not is_specific_command_request and is_hidden:
+                    continue  # Skip hidden commands in group listings
+
                 if subgroup_name and subgroup_name not in subgroups_name:
                     subgroups_name.append(subgroup_name)
                 if command_name and command_name not in commands_names \
                         and not subgroup_name:
-                    commands_names.append(command_name)
+                    # Only add to commands list if not hidden or if specific request
+                    if is_specific_command_request or not is_hidden:
+                        commands_names.append(command_name)
                 if group_name and group_name not in groups_name \
                         and group_name not in subgroups_name:
                     groups_name.append(group_name)
@@ -233,9 +268,15 @@ class HelpProcessor:
             command_parameters=token_meta.get('parameters'))
         if not pretty_params:
             pretty_params = 'No parameters declared'
+
+        # Optionally add a note if command is hidden
+        command_description = token_meta.get('description')
+        if token_meta.get('is_command_hidden', False):
+            command_description = f"[HIDDEN COMMAND] {command_description}"
+
         return COMMAND_HELP_STRING.format(
             entry_point=ENTRY_POINT,
-            command_description=token_meta.get('description'),
+            command_description=command_description,
             usage=' '.join(specified_tokens),
             parameters=pretty_params)
 
