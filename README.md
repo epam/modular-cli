@@ -14,7 +14,7 @@
 
 <a name="info"></a> 
 ## 1. General information
-Modular-CLI is the specialized tool for interacting with the [Modular-API](https://git.epam.com/epmc-eoos/m3-modular-admin/-/blob/develop/README.md).
+Modular CLI is the specialized tool for interacting with the [Modular-API](https://git.epam.com/epmc-eoos/m3-modular-admin/-/blob/develop/README.md).
 Automatically generate auth token, request body based on received meta from Modular-API and send it 
 via HTTP requests.
 
