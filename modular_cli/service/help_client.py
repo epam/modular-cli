@@ -16,7 +16,10 @@ from modular_cli.service.config import (
     CONF_REFRESH_TOKEN, CONF_ACCESS_TOKEN
 )
 from modular_cli.service.initializer import init_configuration
-from modular_cli.service.utils import save_meta_to_file, MODULAR_CLI_META_DIR
+from modular_cli.service.utils import (
+    save_meta_to_file, MODULAR_CLI_META_DIR, get_deprecation_tag,
+    format_command_warnings_block_styled,
+)
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
     M3ADMIN_MODULE, MISSING_CONFIGURATION_MESSAGE,
@@ -173,6 +176,12 @@ class HelpProcessor:
                 if body.get('is_command_hidden', False):
                     continue  # Skip hidden commands in listings
 
+                # Add deprecation tag for deprecated commands in listings
+                deprecation_info = body.get('deprecation')
+                if deprecation_info:
+                    tag = get_deprecation_tag(deprecation_info)
+                    token_name = token_name + tag
+
             if not level_token_types.get(token_type):
                 level_token_types.update({token_type: []})
             level_token_types.get(token_type).append(token_name)
@@ -180,7 +189,7 @@ class HelpProcessor:
         if not level_token_types:
             return ANY_COMMANDS_AVAILABLE_HELP.format(help_stub=HELP_STUB)
 
-        help: str = GENERAL_HELP_STRING.format(
+        help_str: str = GENERAL_HELP_STRING.format(
             help_stub=HELP_STUB, entry_point=ENTRY_POINT)
         if level_token_types.get('root command'):
             root_command = level_token_types.pop('root command')
@@ -188,10 +197,10 @@ class HelpProcessor:
                 level_token_types['command'].extend(root_command)
             else:
                 level_token_types['command'] = root_command
-        for type, names_list in level_token_types.items():
+        for _type, names_list in level_token_types.items():
             names = "\n\t".join(sorted(names_list))
-            help = help + f"Available {type}s:\n\t{names}\n"
-        return help
+            help_str = help_str + f"Available {_type}s:\n\t{names}\n"
+        return help_str
 
     def generate_module_meta(self, modules_meta, requested_command):
         prepared_command_path = self.prepare_command_path(
@@ -261,24 +270,33 @@ class HelpProcessor:
             token_meta: dict,
             specified_tokens: list,
     ) -> str:
-        # command_description, group, subgroup, command_parameters = \
-        #     self.resolve_parameters_from_appropriate_command(
-        #         appropriate_command=token_meta)
         pretty_params = self.prettify_command_parameters(
             command_parameters=token_meta.get('parameters'))
         if not pretty_params:
             pretty_params = 'No parameters declared'
 
-        # Optionally add a note if command is hidden
-        command_description = token_meta.get('description')
-        if token_meta.get('is_command_hidden', False):
-            command_description = f"[HIDDEN COMMAND] {command_description}"
+        command_description = token_meta.get('description', '')
 
-        return COMMAND_HELP_STRING.format(
+        # Build combined warning block
+        deprecation_info = token_meta.get('deprecation')
+        is_hidden = token_meta.get('is_command_hidden', False)
+
+        combined_warning = format_command_warnings_block_styled(
+            deprecation_info=deprecation_info,
+            is_hidden=is_hidden,
+        )
+
+        if combined_warning:
+            combined_warning += "\n\n"
+
+        help_string = COMMAND_HELP_STRING.format(
             entry_point=ENTRY_POINT,
             command_description=command_description,
             usage=' '.join(specified_tokens),
-            parameters=pretty_params)
+            parameters=pretty_params
+        )
+
+        return combined_warning + help_string
 
 
 def extract_root_commands(admin_home_path):

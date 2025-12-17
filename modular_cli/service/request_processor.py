@@ -105,7 +105,10 @@ def resolve_secure_parameters(command, params):
     return params_to_log
 
 
-def resolve_passed_files(command, params):
+def resolve_passed_files(
+        command: dict,
+        params: dict,
+) -> dict:
     parameters = command['parameters']
     for parameter in parameters:
         is_file = parameter.get('convert_content_to_file')
@@ -120,17 +123,37 @@ def resolve_passed_files(command, params):
         if allowed_extensions and file_extension not in allowed_extensions:
             raise ModularCliBadRequestException(
                 f'File must have the following extensions: '
-                f'{", ".join(allowed_extensions)}')
+                f'{", ".join(allowed_extensions)}'
+            )
         if not os.path.isfile(path_to_file):
             raise ModularCliBadRequestException(
                 'Provided file path does not exist'
             )
-        encoded_str = str(b64encode(open(path_to_file, 'rb').read()))[2:-1]
 
-        params.update(
-            {parameter_name: {'file_content': encoded_str,
-                              'filename': filename,
-                              'file_extension': file_extension}})
+        # Distinguish between permission errors and other issues
+        try:
+            with open(path_to_file, 'rb') as f:
+                encoded_str = str(b64encode(f.read()))[2:-1]
+        except PermissionError:
+            raise ModularCliBadRequestException(
+                f'Permission denied: unable to read file at {path_to_file}'
+            )
+        except FileNotFoundError:
+            raise ModularCliBadRequestException(
+                'Provided file path does not exist'
+            )
+        except OSError as e:
+            raise ModularCliBadRequestException(
+                f'Unable to read file: {str(e)}'
+            )
+
+        params.update({
+            parameter_name: {
+                'file_content': encoded_str,
+                'filename': filename,
+                'file_extension': file_extension,
+            },
+        })
     return params
 
 

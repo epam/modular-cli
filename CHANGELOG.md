@@ -1,6 +1,22 @@
 CHANGELOG
 =========
 
+# [2.3.17] - 2025-11-24
+* Fix file permission error handling to display accurate error messages instead of generic `file not found` with traceback
+* Improve file reading to use context manager for proper resource management
+
+# [2.3.16] - 2025-11-20
+* Improve `README.md`
+
+# [2.3.15] - 2025-11-03
+* Add support for processing command deprecation metadata from API
+
+# [2.3.14] - 2025-10-16
+* Add `DEPRECATION_FLOW.md` file describing the deprecation process for the CLI tool
+
+# [2.3.13] - 2025-10-16
+* Update library `click` from 7.1.2 to 8.3.0
+
 # [2.3.12] - 2025-09-04
 ### Add
 - Support for hidden commands in help system
