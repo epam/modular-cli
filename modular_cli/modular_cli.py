@@ -1,4 +1,3 @@
-import os
 import sys
 from json import JSONDecodeError
 from http import HTTPStatus
@@ -11,10 +10,15 @@ from modular_cli.service.decorators import (
 from modular_cli.service.help_client import (
     retrieve_commands_meta_content, HelpProcessor,
 )
-from modular_cli.service.config import ConfigurationProvider, add_data_to_config, CONF_ACCESS_TOKEN, CONF_REFRESH_TOKEN
+from modular_cli.service.config import (
+    ConfigurationProvider, add_data_to_config, CONF_ACCESS_TOKEN,
+    CONF_REFRESH_TOKEN,
+)
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.request_processor import prepare_request
-from modular_cli.service.utils import find_token_meta
+from modular_cli.service.utils import (
+    find_token_meta, check_deprecation_enforcement, emit_deprecation_warning,
+)
 from modular_cli.utils.exceptions import (
     ModularCliInternalException, ModularCliUnauthorizedException,
 )
@@ -59,6 +63,15 @@ def modular_cli(
         help_message = help_processor.get_help_message(token_meta=token_meta)
         click.echo(help_message)
         sys.exit(0)
+
+    # ========================================
+    # Check deprecation BEFORE execution
+    # (mimics original @deprecated decorator)
+    # ========================================
+    deprecation_info = token_meta.get('deprecation')
+    check_deprecation_enforcement(deprecation_info)  # Raises error if removed + enforced
+    emit_deprecation_warning(deprecation_info)  # Shows warning to stderr
+
     resource, method, parameters, params_to_log = prepare_request(
         token_meta=token_meta, passed_parameters=parameters,
     )
@@ -72,8 +85,11 @@ def modular_cli(
         )
 
     response = adapter_sdk.execute_command(
-        resource=resource, parameters=parameters,
-        method=method, params_to_log=params_to_log)
+        resource=resource,
+        parameters=parameters,
+        method=method,
+        params_to_log=params_to_log,
+    )
     if response.status_code == HTTPStatus.NO_CONTENT.value:
         return CommandResponse(message=NO_CONTENT_RESPONSE_MESSAGE)
     try:

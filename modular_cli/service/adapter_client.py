@@ -29,8 +29,13 @@ class AdapterClient:
         }
         SYSTEM_LOG.info('Adapter SDK has been initialized')
 
-    def __make_request(self, resource: str, method: str, payload: dict = None,
-                       params_to_log: dict = None) -> requests.Response:
+    def __make_request(
+            self,
+            resource: str,
+            method: str,
+            payload: dict | None = None,
+            params_to_log: dict | None = None,
+    ) -> requests.Response:
         assert method in self.__method_to_function  # todo allow all methods
         method_func = self.__method_to_function[method]
         parameters = dict(url=f'{self.__api_link}{resource}')
@@ -41,7 +46,8 @@ class AdapterClient:
         SYSTEM_LOG.debug(
             f'API request info: Resource: {resource}; '
             f'Parameters: {params_to_log if params_to_log else {}}; '
-            f'Method: {method}.')
+            f'Method: {method}.'
+        )
         # todo fix the kludges with paths
         if self.__token and resource not in ('/login', '/refresh'):
             parameters.update(
@@ -66,7 +72,8 @@ class AdapterClient:
         except requests.exceptions.ConnectionError:
             raise ModularCliConfigurationException(
                 'Provided configuration api_link is invalid or outdated. '
-                'Please contact the tool support team.')
+                'Please contact the tool support team.'
+            )
         SYSTEM_LOG.debug(f'API response info: {response}')
         return response
 

@@ -18,10 +18,14 @@ def init_configuration():
     #  instead of yaml because it's not used by humans.
     if os.path.exists(config_path):
         config = ConfigurationProvider()
-        return AdapterClient(adapter_api=config.api_link,
-                             username=config.username,
-                             secret=config.password,
-                             token=config.access_token)
+        return AdapterClient(
+            adapter_api=config.api_link,
+            username=config.username,
+            secret=config.password,
+            token=config.access_token,
+        )
     else:
-        SYSTEM_LOG.info(f'Configuration is missing by path {config_path}. '
-                        f'Initialization skipped.')
+        SYSTEM_LOG.info(
+            f'Configuration is missing by path {config_path}. Initialization '
+            f'skipped.'
+        )
