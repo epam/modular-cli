@@ -115,6 +115,7 @@ def check_and_extract_received_params(arguments, required_params):
             if required:
                 missing.append(arg.replace('--', ''))
     if missing:
+        missing = [f"'{param}'" for param in missing]
         raise ModularCliBadRequestException(
             f'The following parameters are missing: {", ".join(missing)}')
     return result
@@ -289,10 +290,23 @@ class CommandResponse:
         # modular-api provides status of operation which can always be
         # determined by status code. Here this self.status not used
         self.meta = dict(kwargs)
+
+        # Only validate responses NOT from server
+        # Server responses have 'Status' field and already validated
+        is_server_response = self.status is not None
+
+        if not is_server_response:
+            self._validate_response_structure()
+
+    def _validate_response_structure(self):
+        """Add warning if response structure is incomplete (client-side only)."""
         if not (self.table_title and self.items) and self.message is None:
-            self.warnings.append(
-                'Please provide "table_title" and "items" or "message" '
-                'parameter')
+            warning_msg = (
+                'Please provide "table_title" and "items" or "message" parameter'
+            )
+            # Extra safety: avoid duplicates
+            if warning_msg not in self.warnings:
+                self.warnings.append(warning_msg)
 
 
 class ResponseFormatter:

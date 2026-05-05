@@ -16,18 +16,18 @@ from modular_cli.service.config import (
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.request_processor import prepare_request
-from modular_cli.service.utils import (
-    find_token_meta, check_deprecation_enforcement, emit_deprecation_warning,
-)
 from modular_cli.utils.exceptions import (
     ModularCliInternalException, ModularCliUnauthorizedException,
 )
-from modular_cli.service.utils import JWTToken
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
     NO_CONTENT_RESPONSE_MESSAGE, MISSING_CONFIGURATION_MESSAGE,
 )
 from modular_cli.service.adapter_client import AdapterClient
+from modular_cli.service.utils import (
+    find_token_meta, check_all_deprecation_enforcement, JWTToken,
+    emit_all_deprecation_warnings,
+)
 
 CONTEXT_SETTINGS = dict(allow_extra_args=True, ignore_unknown_options=True)
 # if you are going to change the value of the next line - please change
@@ -68,9 +68,8 @@ def modular_cli(
     # Check deprecation BEFORE execution
     # (mimics original @deprecated decorator)
     # ========================================
-    deprecation_info = token_meta.get('deprecation')
-    check_deprecation_enforcement(deprecation_info)  # Raises error if removed + enforced
-    emit_deprecation_warning(deprecation_info)  # Shows warning to stderr
+    check_all_deprecation_enforcement(token_meta)
+    emit_all_deprecation_warnings(token_meta)
 
     resource, method, parameters, params_to_log = prepare_request(
         token_meta=token_meta, passed_parameters=parameters,

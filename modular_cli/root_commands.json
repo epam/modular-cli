@@ -1,5 +1,6 @@
 {
   "version": {
+    "type": "root command",
     "description": "Describes available module(s) version",
     "body": {
       "parameters": [
@@ -15,6 +16,7 @@
     }
   },
   "login": {
+    "type": "root command",
     "description": "Usage: $entry_point_name login\n\nReturns JWT token and commands meta in accordance with the user's permissions",
     "body": {
       "parameters": {
@@ -22,6 +24,7 @@
     }
   },
   "health_check": {
+    "type": "root command",
     "description": "Usage: $entry_point_name health_check\n\nReturns service health status",
     "body": {
       "parameters": {
@@ -29,6 +32,7 @@
     }
   },
   "setup": {
+    "type": "root command",
     "description": "Configure Modular-CLI.",
     "body": {
       "parameters": [
@@ -48,10 +52,25 @@
     }
   },
   "cleanup": {
+    "type": "root command",
     "description": "Usage: $entry_point_name cleanup\n\nRemoves all the configuration data related to the tool.",
     "body": {
       "parameters": {
       }
+    }
+  },
+  "enable_autocomplete": {
+    "type": "root command",
+    "description": "Enables command auto-completion suggestions",
+    "body": {
+      "parameters": []
+    }
+  },
+  "disable_autocomplete": {
+    "type": "root command",
+    "description": "Disables command auto-completion",
+    "body": {
+      "parameters": []
     }
   }
 }
