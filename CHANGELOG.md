@@ -1,6 +1,64 @@
 CHANGELOG
 =========
 
+# [2.3.27] - 2026-01-14
+* Add group deprecation support:
+  - Extend `find_token_meta()` to collect `_parent_deprecations` from parent groups
+  - Add `_current_group_info` metadata for group help display
+  - Add `check_all_deprecation_enforcement()` to block removed groups and commands
+  - Add `emit_all_deprecation_warnings()` to emit warnings for deprecated groups and commands
+  - Add `format_group_deprecation_info()` for group deprecation display in help
+  - Show deprecation tags for groups in help listings (not just commands)
+  - Show group deprecation warnings when executing commands under deprecated groups
+* Refactor deprecation helpers in `utils.py`:
+  - Consolidate `parse_date_from_str()` and `days_until_removal()` into `_days_until()`
+  - Rename `get_deprecation_color()` to `_get_color()` (private)
+  - Rename `format_deprecation_lines()` to `_format_deprecation_lines()` with `entity_type` param
+  - Remove unused `format_deprecation_block_styled()`
+* Consolidate `find_token_meta()` - remove duplicate from `help_client.py`, use `utils.py` version
+* Improve `get_deprecation_tag()` with styled output and days remaining (e.g., `[DEPRECATED - 15d left]`)
+
+# [2.3.26] - 2026-01-13
+* Add description display support in help system:
+  - Add `_get_item_description()` method to extract descriptions from metadata
+  - Add `_format_items_with_descriptions()` method for aligned column formatting
+  - Update `get_help_message()` to display descriptions alongside modules/groups/commands
+  - Store items as `(name, description)` tuples for proper formatting
+  - Truncate long descriptions to 50 characters with ellipsis
+* Update `root_commands.json`:
+  - Add `type: "root command"` field to all root commands
+  - Add `enable_autocomplete` and `disable_autocomplete` commands
+  - Clean up descriptions (remove redundant "Usage:" prefixes)
+
+# [2.3.25] - 2026-01-12
+* Add hidden group support in help system:
+  - Add `_should_show_group()` method to determine group visibility
+  - Filter hidden groups from help listings while keeping them executable
+  - Add `find_token_meta()` function for metadata navigation with hidden item handling
+  - Add `_filter_hidden_items()` helper to filter hidden groups and commands from display
+
+# [2.3.24] - 2026-01-08
+* Remove extra indentation from deprecation/hidden command warnings in help output
+
+# [2.3.23] - 2026-01-08
+* Fix hidden root commands appearing in module help listings (e.g., `billing --help`)
+
+# [2.3.22] - 2026-01-05
+* Fix `version` command to work without configuration by gracefully handling missing setup
+* Fix `version` command help text incorrectly showing "login" instead of "version"
+
+# [2.3.21] - 2026-01-02
+* Improve error message when invalid parameters are provided
+
+# [2.3.20] - 2025-12-11
+* Fix duplicate validation warnings in `CommandResponse` by skipping client-side validation for server responses
+
+# [2.3.19] - 2025-12-10
+* Fix case-sensitive enum parameter validation to accept values regardless of case
+
+# [2.3.18] - 2025-12-05
+* Add validation for enum parameters using `allowed_choices` field from command metadata
+
 # [2.3.17] - 2025-11-24
 * Fix file permission error handling to display accurate error messages instead of generic `file not found` with traceback
 * Improve file reading to use context manager for proper resource management

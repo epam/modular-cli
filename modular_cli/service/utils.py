@@ -1,22 +1,23 @@
+from __future__ import annotations
+
 import base64
 import json
 import time
-from pathlib import Path
 from datetime import date
-from typing import Optional
+from pathlib import Path
+
 import click
 
 from modular_cli.utils.exceptions import ModularCliBadRequestException
-from modular_cli.utils.variables import COMMANDS_META
 from modular_cli.utils.logger import get_logger
-
+from modular_cli.utils.variables import COMMANDS_META
 
 _LOG = get_logger(__name__)
 
 MODULAR_CLI_META_DIR = '.modular_cli'
 
 
-def save_meta_to_file(meta: dict):
+def save_meta_to_file(meta: dict) -> None:
     admin_home_path = Path.home() / MODULAR_CLI_META_DIR
     admin_home_path.mkdir(exist_ok=True)
     path_to_meta = admin_home_path / COMMANDS_META
@@ -24,16 +25,83 @@ def save_meta_to_file(meta: dict):
         json.dump(meta, f, separators=(',', ':'))
 
 
-def find_token_meta(commands_meta, specified_tokens):
+def find_token_meta(
+        commands_meta: dict,
+        specified_tokens: list | None,
+) -> dict:
+    """
+    Navigate through commands_meta to find the metadata for specified tokens.
+    Also collects deprecation info from parent groups along the path.
+    """
     if not specified_tokens:
         return commands_meta
+
     current_meta = commands_meta
-    for token in specified_tokens:
-        token_meta = current_meta.get(token)
-        if not token_meta:
+    parent_deprecations = []
+    first_token = specified_tokens[0]
+
+    # If first token not found at root, search inside modules
+    if first_token not in current_meta:
+        for module_name, module_meta in commands_meta.items():
+            if not isinstance(module_meta, dict):
+                continue
+            if module_meta.get('type') != 'module':
+                continue
+            module_body = module_meta.get('body', {})
+            if first_token in module_body:
+                current_meta = module_body
+                break
+        else:
             raise ModularCliBadRequestException(
-                f'Failed to find specified command: {token}')
-        current_meta = token_meta.get('body')
+                f'Failed to find specified command: {first_token}'
+            )
+
+    for i, token in enumerate(specified_tokens):
+        is_last_token = (i == len(specified_tokens) - 1)
+
+        if token not in current_meta:
+            if isinstance(current_meta, dict) and 'body' in current_meta \
+                    and token in current_meta['body']:
+                current_meta = current_meta['body'][token]
+            else:
+                raise ModularCliBadRequestException(
+                    f'Failed to find specified command: {token}'
+                )
+        else:
+            current_meta = current_meta[token]
+
+        # Collect group deprecation info
+        if isinstance(current_meta, dict):
+            if current_meta.get('type') == 'group' \
+                    and current_meta.get('deprecation'):
+                parent_deprecations.append({
+                    'name': token,
+                    'type': 'group',
+                    'deprecation': current_meta['deprecation'],
+                })
+
+        if isinstance(current_meta, dict) and 'body' in current_meta:
+            if is_last_token:
+                body = current_meta.get('body', {})
+                if isinstance(body, dict):
+                    body = body.copy()
+                    if parent_deprecations:
+                        body['_parent_deprecations'] = parent_deprecations
+                    body['_current_group_info'] = {
+                        'name': token,
+                        'type': current_meta.get('type'),
+                        'description': current_meta.get('description', ''),
+                        'deprecation': current_meta.get('deprecation'),
+                        'is_group_hidden': current_meta.get('is_group_hidden', False),
+                    }
+                    return body
+                return current_meta
+            else:
+                current_meta = current_meta['body']
+
+    if isinstance(current_meta, dict) and parent_deprecations:
+        current_meta = current_meta.copy()
+        current_meta['_parent_deprecations'] = parent_deprecations
 
     return current_meta
 
@@ -59,7 +127,7 @@ class JWTToken:
                 base64.b64decode(self._token.split('.')[1] + '==').decode()
             )
         except Exception:
-            return
+            return None
 
     def is_expired(self) -> bool:
         p = self.payload
@@ -71,271 +139,243 @@ class JWTToken:
         return exp < time.time() + self._exp_threshold
 
 
-def parse_date_from_str(date_str: str) -> Optional[date]:
-    """Parse date string in YYYY-MM-DD format."""
-    try:
-        return date.fromisoformat(date_str)
-    except (ValueError, AttributeError, TypeError):
-        return None
+# ============================================================================
+# DEPRECATION HELPER FUNCTIONS
+# ============================================================================
 
-
-def days_until_removal(removal_date_str: str) -> int:
+def _days_until(removal_date_str: str) -> int:
     """Calculate days until removal date."""
-    removal_date = parse_date_from_str(removal_date_str)
-    if not removal_date:
+    try:
+        removal_date = date.fromisoformat(removal_date_str)
+        return (removal_date - date.today()).days
+    except (ValueError, AttributeError, TypeError):
         return 0
-    return (removal_date - date.today()).days
 
 
-def format_deprecation_lines(deprecation_info: dict) -> list[str]:
-    """
-    Format deprecation information as warning lines.
+def _get_color(removal_date_str: str) -> str:
+    """Get color based on days until removal."""
+    return "yellow" if _days_until(removal_date_str) > 30 else "red"
 
-    Args:
-        deprecation_info: Dict with keys: removal_date, alternative,
-                         deprecated_date, version, reason
 
-    Returns:
-        List of formatted warning lines (including separators)
-    """
-    if not deprecation_info:
-        return []
+def _format_deprecation_lines(
+        deprecation_info: dict,
+        entity_type: str = "command",
+) -> list[str]:
+    """Format deprecation warning as list of lines (without separators)."""
+    removal_date_str = deprecation_info.get('removal_date', '')
+    days_left = _days_until(removal_date_str)
 
-    removal_date_str = deprecation_info.get('removal_date')
-    if not removal_date_str:
-        return []
+    lines = [f"WARNING: This {entity_type} is DEPRECATED"]
 
-    days_left = days_until_removal(removal_date_str)
-    IND = "  "
-    SEP = "=" * 69
+    if deprecation_info.get('deprecated_date'):
+        lines.append(f"Deprecated since: {deprecation_info['deprecated_date']}")
 
-    lines = [
-        f"{IND}{SEP}",
-        f"{IND}WARNING: This command is DEPRECATED"
-    ]
+    if deprecation_info.get('version'):
+        lines.append(f"Deprecated in version: {deprecation_info['version']}")
 
-    deprecated_date = deprecation_info.get('deprecated_date')
-    if deprecated_date:
-        lines.append(f"{IND}Deprecated since: {deprecated_date}")
+    if removal_date_str:
+        if days_left > 30:
+            lines.append(
+                f"Scheduled for removal on: {removal_date_str} "
+                f"({days_left} days left)"
+            )
+        elif days_left > 0:
+            lines.append(
+                f"Will be REMOVED in {days_left} days on: {removal_date_str}"
+            )
+        elif days_left == 0:
+            lines.append(f"Will be REMOVED TODAY on: {removal_date_str}")
+        else:
+            lines.append(
+                f"REMOVAL DATE PASSED on: {removal_date_str} "
+                f"({abs(days_left)} days ago)"
+            )
 
-    version = deprecation_info.get('version')
-    if version:
-        lines.append(f"{IND}Deprecated in version: {version}")
+    if deprecation_info.get('alternative'):
+        lines.append(f"Use instead: {deprecation_info['alternative']}")
 
-    # Format removal date message
-    if days_left > 30:
-        lines.append(
-            f"{IND}Scheduled for removal on: {removal_date_str} "
-            f"({days_left} days left)"
-        )
-    elif days_left > 0:
-        lines.append(
-            f"{IND}Will be REMOVED in {days_left} days on: {removal_date_str}"
-        )
-    elif days_left == 0:
-        lines.append(f"{IND}Will be REMOVED TODAY on: {removal_date_str}")
-    else:
-        lines.append(
-            f"{IND}REMOVAL DATE PASSED on: {removal_date_str} "
-            f"({abs(days_left)} days ago)"
-        )
-
-    alternative = deprecation_info.get('alternative')
-    if alternative:
-        lines.append(f"{IND}Use instead: {alternative}")
-
-    reason = deprecation_info.get('reason')
-    if reason:
-        lines.append(f"{IND}Reason: {reason}")
-
-    lines.append(f"{IND}{SEP}")
+    if deprecation_info.get('reason'):
+        lines.append(f"Reason: {deprecation_info['reason']}")
 
     return lines
 
 
+def check_deprecation_enforcement(deprecation_info: dict | None) -> None:
+    """Check if command should be blocked due to removal date passing."""
+    if not deprecation_info:
+        return
+    if not deprecation_info.get('enforce_removal', False):
+        return
+    removal_date_str = deprecation_info.get('removal_date')
+    if not removal_date_str:
+        return
+    if _days_until(removal_date_str) >= 0:
+        return
+
+    alternative = deprecation_info.get('alternative')
+    days_ago = abs(_days_until(removal_date_str))
+
+    click.secho("=" * 69, fg="red", bold=True, err=True)
+    click.secho(
+        "  ERROR: This command has been REMOVED!",
+        fg="red", bold=True, err=True,
+    )
+    click.secho(
+        f"  Removal date: {removal_date_str} ({days_ago} days ago)",
+        fg="red", bold=True, err=True,
+    )
+    if alternative:
+        click.secho(
+            f"  Use instead: {alternative}",
+            fg="red", bold=True, err=True,
+        )
+    click.secho("=" * 69, fg="red", bold=True, err=True)
+
+    _LOG.error(
+        f"Attempted to execute removed command. Removal date: {removal_date_str}"
+    )
+    raise click.UsageError(
+        f"Command removed on {removal_date_str}. Use: "
+        f"{alternative or 'See documentation for alternatives'}"
+    )
+
+
+def check_all_deprecation_enforcement(token_meta: dict) -> None:
+    """Check deprecation enforcement for both command AND parent groups."""
+    for parent in token_meta.get('_parent_deprecations', []):
+        deprecation = parent.get('deprecation')
+        if not deprecation or not deprecation.get('enforce_removal', False):
+            continue
+        removal_date_str = deprecation.get('removal_date')
+        if not removal_date_str or _days_until(removal_date_str) >= 0:
+            continue
+
+        group_name = parent.get('name', 'unknown')
+        alternative = deprecation.get('alternative')
+        days_ago = abs(_days_until(removal_date_str))
+
+        click.secho("=" * 69, fg="red", bold=True, err=True)
+        click.secho(
+            f"  ERROR: The '{group_name}' command group has been REMOVED!",
+            fg="red", bold=True, err=True)
+        click.secho(f"  Removal date: {removal_date_str} ({days_ago} days ago)",
+                    fg="red", bold=True, err=True)
+        if alternative:
+            click.secho(f"  Use instead: {alternative}", fg="red", bold=True,
+                        err=True)
+        click.secho("=" * 69, fg="red", bold=True, err=True)
+
+        raise click.UsageError(
+            f"Command group '{group_name}' removed on {removal_date_str}. "
+            f"Use: {alternative or 'See documentation'}"
+        )
+
+    check_deprecation_enforcement(token_meta.get('deprecation'))
+
+
+def emit_deprecation_warning(deprecation_info: dict | None) -> None:
+    """Emit deprecation warning to stderr at runtime."""
+    if not deprecation_info:
+        return
+    removal_date_str = deprecation_info.get('removal_date')
+    if not removal_date_str:
+        return
+
+    color = _get_color(removal_date_str)
+    click.secho("=" * 69, fg=color, bold=True, err=True)
+    for line in _format_deprecation_lines(deprecation_info):
+        click.secho(line, fg=color, bold=True, err=True)
+    click.secho("=" * 69, fg=color, bold=True, err=True)
+
+
+def emit_all_deprecation_warnings(token_meta: dict) -> None:
+    """Emit deprecation warnings for both parent groups AND command."""
+    for parent in token_meta.get('_parent_deprecations', []):
+        deprecation = parent.get('deprecation')
+        if not deprecation:
+            continue
+        removal_date_str = deprecation.get('removal_date')
+        if not removal_date_str:
+            continue
+
+        group_name = parent.get('name', 'unknown')
+        color = _get_color(removal_date_str)
+
+        click.secho("=" * 69, fg=color, bold=True, err=True)
+        for line in _format_deprecation_lines(
+                deprecation, f"command group '{group_name}'"):
+            click.secho(line, fg=color, bold=True, err=True)
+        click.secho("=" * 69, fg=color, bold=True, err=True)
+
+    emit_deprecation_warning(token_meta.get('deprecation'))
+
+
+def get_deprecation_tag(deprecation_info: dict | None) -> str:
+    """Get styled deprecation tag for help listings."""
+    if not deprecation_info:
+        return ""
+    removal_date_str = deprecation_info.get('removal_date')
+    if not removal_date_str:
+        return click.style(" [DEPRECATED]", fg="yellow", bold=True)
+
+    days_left = _days_until(removal_date_str)
+    if days_left < 0:
+        return click.style(" [REMOVED]", fg="red", bold=True)
+    elif days_left <= 30:
+        return click.style(f" [DEPRECATED - {days_left}d left]", fg="red",
+                           bold=True)
+    return click.style(" [DEPRECATED]", fg="yellow", bold=True)
+
+
 def format_command_warnings_block_styled(
-        deprecation_info: dict = None,
-        is_hidden: bool = False
+        deprecation_info: dict | None = None,
+        is_hidden: bool = False,
 ) -> str:
-    """
-    Format combined command warnings (deprecation + hidden status) in a single block.
-
-    Args:
-        deprecation_info: Deprecation metadata
-        is_hidden: Whether the command is hidden
-
-    Returns:
-        Colored string with newlines (for help display)
-    """
+    """Format combined warning block for command help display."""
     if not deprecation_info and not is_hidden:
         return ""
 
+    SEP = "=" * 69
     lines = []
-    IND = "  "
 
-    # Add deprecation warnings first (higher priority)
-    if deprecation_info:
-        deprecation_lines = format_deprecation_lines(deprecation_info)
-        if deprecation_lines:
-            # Remove the separators from deprecation_lines
-            # (they're at index 0 and -1)
-            lines.extend(deprecation_lines[1:-1])
-
-    # Add hidden command notice
-    if is_hidden:
-        if lines:  # Add blank line if we already have deprecation info
-            lines.append("")
-        lines.append(f"{IND}NOTICE: This is a HIDDEN COMMAND")
-        lines.append(
-            f"{IND}This command is not shown in standard help listings")
-
-    # Wrap with separators
-    if lines:
-        SEP = "=" * 69
-        lines.insert(0, f"{IND}{SEP}")
-        lines.append(f"{IND}{SEP}")
-
-    # Apply color styling
+    # Determine color
     if deprecation_info and deprecation_info.get('removal_date'):
-        color = get_deprecation_color(deprecation_info['removal_date'])
+        color = _get_color(deprecation_info['removal_date'])
     else:
-        color = 'cyan'  # Default color for hidden-only commands
+        color = "cyan"
 
-    styled_lines = [click.style(line, fg=color, bold=True) for line in lines]
-    return '\n'.join(styled_lines)
+    lines.append(click.style(SEP, fg=color, bold=True))
+
+    # Deprecation warning first
+    if deprecation_info and deprecation_info.get('removal_date'):
+        for line in _format_deprecation_lines(deprecation_info):
+            lines.append(click.style(line, fg=color, bold=True))
+
+    # Hidden notice second
+    if is_hidden:
+        if deprecation_info:
+            lines.append("")
+        lines.append(click.style(
+            "NOTICE: This is a HIDDEN command", fg=color, bold=True))
+        lines.append(click.style(
+            "This command is not shown in help listings but is still "
+            "executable.", fg=color))
+
+    lines.append(click.style(SEP, fg=color, bold=True))
+    return "\n".join(lines)
 
 
-def get_deprecation_color(removal_date_str: str) -> str:
-    """
-    Get appropriate color for deprecation warning.
-
-    Returns:
-        'yellow' if >30 days until removal, 'red' otherwise
-    """
-    days_left = days_until_removal(removal_date_str)
-    return "yellow" if days_left > 30 else "red"
-
-
-def format_deprecation_block_styled(deprecation_info: dict) -> str:
-    """
-    Format deprecation block with ANSI color styling for help text.
-
-    Args:
-        deprecation_info: Deprecation metadata
-
-    Returns:
-        Colored string with newlines (for help display)
-    """
+def format_group_deprecation_info(deprecation_info: dict | None) -> str:
+    """Format deprecation info for group help display."""
     if not deprecation_info:
         return ""
-
-    removal_date_str = deprecation_info.get('removal_date')
+    removal_date_str = deprecation_info.get('removal_date', '')
     if not removal_date_str:
         return ""
 
-    lines = format_deprecation_lines(deprecation_info)
-    color = get_deprecation_color(removal_date_str)
-
-    styled_lines = [click.style(line, fg=color, bold=True) for line in lines]
-    return '\n'.join(styled_lines)
-
-
-def emit_deprecation_warning(deprecation_info: dict) -> None:
-    """
-    Emit deprecation warning to stderr at runtime.
-    This is called BEFORE command execution (like the original decorator).
-
-    Args:
-        deprecation_info: Deprecation metadata
-    """
-    if not deprecation_info:
-        return
-
-    removal_date_str = deprecation_info.get('removal_date')
-    if not removal_date_str:
-        return
-
-    lines = format_deprecation_lines(deprecation_info)
-    color = get_deprecation_color(removal_date_str)
-
-    for line in lines:
-        click.secho(line, fg=color, bold=True, err=True)
-
-    # No blank line after - to match original behavior
-
-
-def check_deprecation_enforcement(deprecation_info: dict) -> None:
-    """
-    Check if command should be blocked due to removal date passing.
-
-    Args:
-        deprecation_info: Deprecation metadata
-
-    Raises:
-        click.UsageError: If command is removed and enforcement is enabled
-    """
-    if not deprecation_info:
-        return
-
-    removal_date_str = deprecation_info.get('removal_date')
-    if not removal_date_str:
-        return
-
-    days_left = days_until_removal(removal_date_str)
-    enforce_removal = deprecation_info.get('enforce_removal', False)
-
-    if enforce_removal and days_left < 0:
-        # Show error message
-        click.secho("  " + "=" * 69, fg="red", bold=True, err=True)
-        click.secho(
-            "  ERROR: This command has been REMOVED!",
-            fg="red",
-            bold=True,
-            err=True,
-        )
-        click.secho(
-            f"  Removal date: {removal_date_str} ({abs(days_left)} days ago)",
-            fg="red",
-            bold=True,
-            err=True,
-        )
-
-        alternative = deprecation_info.get('alternative')
-        if alternative:
-            click.secho(
-                f"  Use instead: {alternative}",
-                fg="red",
-                bold=True,
-                err=True,
-            )
-        click.secho("  " + "=" * 69, fg="red", bold=True, err=True)
-
-        _LOG.error(
-            f"Attempted to execute removed command. Removal date: {removal_date_str}")
-
-        raise click.UsageError(
-            f"Command removed on {removal_date_str}. "
-            f"Use: {alternative if alternative else 'See documentation for alternatives'}"
-        )
-
-
-def get_deprecation_tag(deprecation_info: dict) -> str:
-    """
-    Get a tag to append to command names in listings.
-
-    Returns:
-        " [DEPRECATED]", " [REMOVED]", or empty string
-    """
-    if not deprecation_info:
-        return ""
-
-    removal_date_str = deprecation_info.get('removal_date')
-    if not removal_date_str:
-        return ""
-
-    days_left = days_until_removal(removal_date_str)
-
-    if days_left < 0:
-        return " [REMOVED]"
-    else:
-        return " [DEPRECATED]"
+    color = _get_color(removal_date_str)
+    SEP = "=" * 69
+    lines = [SEP]
+    lines.extend(_format_deprecation_lines(deprecation_info, "command group"))
+    lines.append(SEP)
+    return "\n".join([click.style(line, fg=color, bold=True) for line in lines])

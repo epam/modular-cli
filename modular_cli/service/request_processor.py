@@ -11,6 +11,7 @@ PATH = 'path'
 ALIAS = 'alias'
 NUMERIC = 'num'
 BOOLEAN = 'bool'
+ENUM = 'enum'
 METHOD = 'method'
 PARAMS = 'parameters'
 REQUIRED = 'required'
@@ -20,9 +21,12 @@ BOOL_PARAM_MAP = {
 }
 
 
-def validate_params(appropriate_command, passed_parameters):
+def validate_params(
+        appropriate_command: dict,
+        passed_parameters: dict,
+) -> None:
     missed_param = [
-        f"{param[NAME]} or {param[ALIAS]}" if param[ALIAS] is not None else param[NAME]
+        f"'{param[NAME]}' or '{param[ALIAS]}'" if param[ALIAS] is not None else f"'{param[NAME]}'"
         for param in appropriate_command[PARAMS]
         if param[REQUIRED] and param[NAME] not in passed_parameters
     ]
@@ -30,8 +34,9 @@ def validate_params(appropriate_command, passed_parameters):
     if missed_param:
         raise ModularCliBadRequestException(
             f'The following parameters are missing: '
-            f'{", ".join(missed_param)}.\n'
-            f'Try \'--help\' for help or list subcommands.')
+            f'{", ".join(missed_param)}.\n '
+            f'Try \'--help\' for help or list subcommands.'
+        )
 
     passed_parameters_names = passed_parameters.keys()
     for checked_name in passed_parameters_names:
@@ -41,26 +46,53 @@ def validate_params(appropriate_command, passed_parameters):
             if checked_name == name:
                 param_type = item.get(TYPE)
                 value = passed_parameters.get(checked_name)
-                check_param_type(p_name=checked_name, p_type=param_type,
-                                 value=value)
+                allowed_choices = item.get('allowed_choices')
+                check_param_type(
+                    p_name=checked_name,
+                    p_type=param_type,
+                    value=value,
+                    allowed_choices=allowed_choices,
+                )
                 found = True
                 break
         if not found:
-            raise ModularCliBadRequestException(f"Invalid parameter "
-                                                  f"\'{checked_name}\'.")
+            raise ModularCliBadRequestException(
+                f"Invalid parameter '{checked_name}'."
+            )
 
 
-def check_param_type(p_name, p_type, value):
+def check_param_type(
+        p_name: str,
+        p_type: str,
+        value: str,
+        allowed_choices: list | None = None,
+) -> None:
     if p_type == BOOLEAN and not isinstance(value, bool):
         raise ModularCliBadRequestException(
-            f'Invalid value of parameter \'{p_name}\'.\nShould be a flag or '
-            f'boolean type expected.')
+            f"Invalid value of parameter '{p_name}'.\nShould be a flag or "
+            f"boolean type expected."
+        )
     if p_type == NUMERIC:
         try:
             float(value)
         except ValueError:
             raise ModularCliBadRequestException(
-                f'Invalid parameter \'{p_name}\'. Numeric value expected.')
+                f"Invalid parameter '{p_name}'. Numeric value expected."
+            )
+
+    if p_type == ENUM and allowed_choices:
+        # Handle both single values and lists (for multiple choice params)
+        values_to_check = value if isinstance(value, list) else [value]
+        # Create lowercase version of allowed choices for comparison
+        allowed_choices_lower = [str(choice).lower() for choice in allowed_choices]
+        for val in values_to_check:
+            # Convert to string before calling lower() to handle non-string types
+            val_str = str(val).lower() if val is not None else ""
+            if val_str not in allowed_choices_lower:
+                raise ModularCliBadRequestException(
+                    f"Invalid value '{val}' for parameter '{p_name}'.\n"
+                    f'Allowed choices: {", ".join(allowed_choices)}'
+                )
 
 
 def alias_to_parameter(command, params):

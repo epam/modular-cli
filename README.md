@@ -1,38 +1,95 @@
-# Modular-CLI Documentation
+## Table of Contents
 
-<a name="content"></a>
+- [Introduction](#introduction)
+1. [General Information](#1-general-information)
+   - [Key Features](#key-features)
+   - [Architecture Overview](#architecture-overview)
+   - [Prerequisites](#prerequisites)
+2. [Installation and Configuration](#2-installation-and-configuration)
+   - [Prerequisites](#prerequisites-1)
+   - [Installation Steps](#installation-steps)
+   - [Initial Configuration](#initial-configuration)
+   - [Configuration File Location](#configuration-file-location)
+3. [Authentication and Authorization](#3-authentication-and-authorization)
+   - [Login Process](#login-process)
+   - [Token Management](#token-management)
+   - [Authorization Model](#authorization-model)
+   - [Security Best Practices](#security-best-practices)
+4. [Command Usage](#4-command-usage)
+   - [Command Structure](#command-structure)
+   - [Built-in Commands](#built-in-commands)
+   - [Discovering Available Commands](#discovering-available-commands)
+   - [Command Execution Examples](#command-execution-examples)
+   - [Common Parameters](#common-parameters)
+5. [Output Formats](#5-output-formats)
+   - [Plain Text Output](#plain-text-output-default)
+   - [JSON Output](#json-output)
+   - [Table Output](#table-output)
+   - [Response Structure](#response-structure)
+6. [Autocomplete](#6-autocomplete)
+   - [Prerequisites](#prerequisites-2)
+   - [Enable Autocomplete](#enable-autocomplete)
+   - [Using Autocomplete](#using-autocomplete)
+   - [Disable Autocomplete](#disable-autocomplete)
+   - [Troubleshooting Autocomplete](#troubleshooting-autocomplete)
+7. [Advanced Configuration](#7-advanced-configuration)
+   - [Environment Variables](#environment-variables)
+   - [Configuration File Structure](#configuration-file-structure)
+   - [Multiple Profiles](#multiple-profiles)
+   - [Logging Configuration](#logging-configuration)
+8. [Modular-CLI Schema](#8-modular-cli-schema)
+   - [Architecture Diagram](#architecture-diagram)
+   - [Request Flow](#request-flow)
+   - [Component Interaction](#component-interaction)
+9. [Annexes](#9-annexes)
+   - [Annex 1: Common Use Cases](#annex-1-common-use-cases)
+   - [Annex 2: Troubleshooting Guide](#annex-2-troubleshooting-guide)
+10. [Project Information](#10-project-information)
 
-## Content
+[//]: # ({{ pagebreak }})
 
-1. [General Information](#general_information)
-2. [Installation and Configuration](#installation_and_configuration)
-3. [Authentication and Authorization](#authentication_authorization)
-4. [Command Usage](#command_usage)
-5. [Output Formats](#output_formats)
-6. [Autocomplete](#autocomplete)
-7. [Advanced Configuration](#advanced_configuration)
-8. [Modular-CLI Schema](#modular_cli_schema)
-9. [Annexes](#annexes)
-    - [Annex 1: Common Use Cases](#annex-1-common-use-cases)
-    - [Annex 2: Troubleshooting Guide](#annex-2-troubleshooting-guide)
-10. [Project Information](#project_information)
+## Introduction
 
-<a name="general_information"></a>
+### About This Guide
+
+This guide describes the installation, configuration, and usage of Modular-CLI – a specialized command-line interface tool for interacting with Modular-API. It provides comprehensive instructions for authentication, command execution, and automation workflows.
+
+### Target Audience
+
+This guide is designed for:
+
+* **System Administrators** managing cloud resources through Modular-API
+* **DevOps Engineers** integrating Modular-CLI into CI/CD pipelines
+* **Support Engineers** performing diagnostic and operational tasks
+* **Developers** building automation scripts with Modular-CLI
+
+### Related Documents
+
+* For Modular-API server setup and administration, refer to [Modular-API Documentation](https://github.com/epam/modular-api/blob/main/README.md)
+* For M3 Admin commands and cloud operations, see M3 Admin User Guide
+* For SDK integration, see [Modular-SDK Documentation](https://github.com/epam/modular-sdk)
+
+[Content ↑](#table-of-contents)
+
+<a name="1-general-information"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 1. General Information
 
-Modular-CLI is a specialized command-line interface tool for interacting with [Modular-API](https://github.com/epam/modular-api). 
-It provides a seamless way to execute commands, manage resources, and interact with multiple modules through a unified CLI interface.
+Modular-CLI is a specialized command-line interface tool for interacting with [Modular-API](https://github.com/epam/modular-api). It provides a seamless way to execute commands, manage resources, and interact with multiple modules through a unified CLI interface.
 
 ### Key Features
 
-* **Automatic Authentication**: JWT token generation and management
-* **Dynamic Command Loading**: Automatically discovers available commands based on user permissions
-* **Multiple Output Formats**: JSON, table, and plain text output
-* **Autocomplete Support**: Command and parameter autocompletion (Unix-based systems; doesn't work in Docker containers as it depends on shell configuration)
-* **Secure Credential Storage**: Encrypted local storage of authentication credentials
-* **Real-time Validation**: Parameter validation before sending requests
-* **Unified Interface**: Single entry point for all Modular-API modules
+| Feature                       | Description                                                     |
+|-------------------------------|-----------------------------------------------------------------|
+| **Automatic Authentication**  | JWT token generation and management                             |
+| **Dynamic Command Loading**   | Automatically discovers available commands based on permissions |
+| **Multiple Output Formats**   | JSON, table, and plain text output                              |
+| **Autocomplete Support**      | Command and parameter autocompletion (Unix-based systems only)  |
+| **Secure Credential Storage** | Encrypted local storage of authentication credentials           |
+| **Real-time Validation**      | Parameter validation before sending requests                    |
+| **Unified Interface**         | Single entry point for all Modular-API modules                  |
 
 ### Architecture Overview
 
@@ -49,15 +106,19 @@ Modular-CLI acts as a client-side interface that:
 
 Before using Modular-CLI, ensure you have:
 
-* **Python 3.10+** installed
-* **pip** package manager
-* **Active Modular-API server** with network accessibility
-* **Valid user credentials** (username and password)
-* **Network connectivity** to Modular-API server
+| Requirement                   | Description                                   |
+|-------------------------------|-----------------------------------------------|
+| **Python 3.10+**              | Python interpreter installed                  |
+| **pip**                       | Package manager for Python                    |
+| **Active Modular-API server** | Server must be running and network accessible |
+| **Valid user credentials**    | Username and password from administrator      |
+| **Network connectivity**      | Access to Modular-API server endpoint         |
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="installation_and_configuration"></a>
+<a name="2-installation-and-configuration"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 2. Installation and Configuration
 
@@ -207,25 +268,25 @@ Configuration for the CLI tool 'modular_cli' has been deleted
 
 ### Configuration File Location
 
-`Modular-CLI` stores configuration in the following locations:
+Modular-CLI stores configuration in the following locations:
 
-**On Linux/Mac:**
-```
-~/.modular_cli/
-├── commands_meta.json   # Commands metadata file
-└── credentials          # User credentials file
-```
+| Platform       | Path                                |
+|----------------|-------------------------------------|
+| **Linux/Mac**  | `~/.modular_cli/`                   |
+| **Windows**    | `C:\Users\<Username>\.modular_cli\` |
 
-**On Windows:**
-```
-C:\Users\<Username>\.modular_cli\
-├── commands_meta.json   # Commands metadata file
-└── credentials          # User credentials file
-```
+**Configuration Files:**
 
-[Content ↑](#content)
+| File                   | Description            |
+|------------------------|------------------------|
+| `commands_meta.json`   | Commands metadata file |
+| `credentials`          | User credentials file  |
 
-<a name="authentication_authorization"></a>
+[Content ↑](#table-of-contents)
+
+<a name="3-authentication-and-authorization"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 3. Authentication and Authorization
 
@@ -259,24 +320,24 @@ version: 4.3.8
 
 ### Token Management
 
+#### Token Types and Validity
+
+| Token Type        | Validity   | Purpose                                   |
+|-------------------|------------|-------------------------------------------|
+| **Access Token**  | 24 hours   | Used for command execution                |
+| **Refresh Token** | 14 days    | Used to automatically renew access tokens |
+
 #### Automatic Token Refresh
 
-`Modular-CLI` automatically manages token lifecycle:
-
-* **Access tokens** are valid for 24 hours
-* **Refresh tokens** are valid for 14 days
-* **Expired access tokens** trigger automatic re-authentication using the refresh token
-* **Expired refresh tokens** require manual login with `modular_cli login`
+Modular-CLI automatically manages token lifecycle:
 
 **What happens during login:**
 
 1. Sends credentials to Modular-API
-2. Receives two JWT tokens:
-   - **Access token** with 24-hour expiration (for command execution)
-   - **Refresh token** with 14-day expiration (for automatic re-authentication)
+2. Receives two JWT tokens (access and refresh)
 3. Retrieves command metadata based on user permissions
 4. Caches tokens and metadata locally
-5. Generates dynamic CLI commands
+5. Generates dynamic Click commands from metadata
 
 **How token refresh works:**
 
@@ -304,9 +365,11 @@ modular_cli version --detailed
 
 Available commands depend on your user permissions defined in Modular-API:
 
-* **Policies** define allowed/denied operations
-* **Groups** combine multiple policies
-* **Users** inherit permissions from assigned groups
+| Component    | Description                              |
+|--------------|------------------------------------------|
+| **Policies** | Define allowed/denied operations         |
+| **Groups**   | Combine multiple policies                |
+| **Users**    | Inherit permissions from assigned groups |
 
 **Example:**
 
@@ -323,17 +386,21 @@ modular_cli tenant deactivate_region --tenant AWS-MSTR-DEV --cloud AWS --all_reg
 
 ### Security Best Practices
 
-1. **Never share credentials** or token files
-2. **Use strong passwords** with complexity requirements
-3. **Logout when done** to clear cached tokens
-4. **Rotate credentials** regularly
-5. **Use read-only accounts** for auditing
-6. **Monitor audit logs** for suspicious activity
-7. **Store credentials securely** in password managers
+| Practice                       | Description                              |
+|--------------------------------|------------------------------------------|
+| **Never share credentials**    | Keep tokens and credential files private |
+| **Use strong passwords**       | Follow complexity requirements           |
+| **Logout when done**           | Clear cached tokens after sessions       |
+| **Rotate credentials**         | Change passwords regularly               |
+| **Use read-only accounts**     | For auditing and monitoring tasks        |
+| **Monitor audit logs**         | Watch for suspicious activity            |
+| **Store credentials securely** | Use password managers for sensitive data |
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="command_usage"></a>
+<a name="4-command-usage"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 4. Command Usage
 
@@ -341,11 +408,13 @@ modular_cli tenant deactivate_region --tenant AWS-MSTR-DEV --cloud AWS --all_reg
 
 The Modular-CLI follows a hierarchical, multi-layered command structure designed for intuitive navigation and organization.
 
-The CLI is organized into three main levels:
+#### Command Levels
 
-- **Root Commands** - Top-level commands available directly under `modular_cli`
-- **Command Groups** - Collections of related commands (can contain both commands and subgroups)
-- **Subcommands** - Specific actions within a group or subgroup
+| Level              | Description                                                          |
+|--------------------|----------------------------------------------------------------------|
+| **Root Commands**  | Top-level commands available directly under `modular_cli`            |
+| **Command Groups** | Collections of related commands (can contain commands and subgroups) |
+| **Subcommands**    | Specific actions within a group or subgroup                          |
 
 #### Hierarchical Structure
 
@@ -371,14 +440,9 @@ modular_cli [group] --help            # Show commands within a specific group
 modular_cli [group] [subgroup] --help # Show commands within a subgroup
 ```
 
-#### Navigation
-
-- Each group logically organizes related functionality
-- Commands follow a consistent naming pattern for predictability
-
 ### Built-in Commands
 
-#### setup - Configure Connection
+#### Setup - Configure Connection
 
 ```bash
 modular_cli setup --username <USER> --password <PASS> --api_path <URL>
@@ -386,9 +450,11 @@ modular_cli setup --username <USER> --password <PASS> --api_path <URL>
 
 **Parameters:**
 
-* `--username` (required): Your Modular-API username
-* `--password` (required): Your password
-* `--api_path` (required): Modular-API server URL
+| Parameter      | Required   | Description               |
+|----------------|------------|---------------------------|
+| `--username`   | ✓          | Your Modular-API username |
+| `--password`   | ✓          | Your password             |
+| `--api_path`   | ✓          | Modular-API server URL    |
 
 **Example:**
 
@@ -399,7 +465,7 @@ modular_cli setup \
   --api_path https://modular.company.com/integration
 ```
 
-#### login - Authenticate and Refresh Commands
+#### Login - Authenticate and Refresh Commands
 
 ```bash
 modular_cli login
@@ -407,31 +473,20 @@ modular_cli login
 
 **Purpose:** Authenticate user, retrieve JWT token, and refresh available commands.
 
-**Example:**
-
-```bash
-modular_cli login
-```
-
 Output:
+
 ```
 Response:
 Login successful
 ```
 
-#### cleanup - Remove Configuration
+#### Cleanup - Remove Configuration
 
 ```bash
 modular_cli cleanup
 ```
 
 **Purpose:** Remove all stored configuration and credentials.
-
-**Example:**
-
-```bash
-modular_cli cleanup
-```
 
 Output:
 
@@ -440,7 +495,7 @@ Response:
 Configuration for the CLI tool 'modular_cli' has been deleted
 ```
 
-#### version - Display Version Information
+#### Version - Display Version Information
 
 ```bash
 modular_cli version --detailed
@@ -448,7 +503,9 @@ modular_cli version --detailed
 
 **Parameters:**
 
-* `--detailed` (optional): Show all modules with detailed information
+| Parameter    | Required  | Description                                |
+|--------------|-----------|--------------------------------------------|
+| `--detailed` | No        | Show all modules with detailed information |
 
 **Examples:**
 
@@ -458,6 +515,7 @@ modular_cli version
 ```
 
 Output:
+
 ```
 Server: 4.3.8
 Client: 2.3.15
@@ -469,6 +527,7 @@ modular_cli version --detailed
 ```
 
 Output:
+
 ```
 Server: 4.3.6
 Client: 2.3.13
@@ -482,7 +541,7 @@ Chef: 1.0.2
 M3admin: 4.150.5
 ```
 
-#### health_check - Check API Server Status
+#### Health Check - Check API Server Status
 
 ```bash
 modular_cli health_check
@@ -490,13 +549,8 @@ modular_cli health_check
 
 **Purpose:** Verify Modular-API server connectivity and health.
 
-**Example:**
-
-```bash
-modular_cli health_check
-```
-
 Output:
+
 ```
 Response:
 Health check successful
@@ -513,15 +567,14 @@ modular_cli --help
 Expected output:
 
 ```
-Description: Here are the commands supported by the current version of modular_cli.
+Description: Here are the commands supported by the current version of modular_cli
 IMPORTANT: The scope of commands you can execute depends on your user permissions
 Usage: modular_cli [module] group [subgroup] command [parameters]
 Options:
-  --help     Show this message and exit.
+  --help     Show this message and exit
 
 Available modules:
   chef
-  stm
 
 Available groups:
   application
@@ -530,8 +583,6 @@ Available groups:
   azure
   configure
   enterprise
-  environment
-  google
   ...
 
 Available commands:
@@ -552,11 +603,11 @@ modular_cli chef --help
 Expected output:
 
 ```
-Description: Here are the commands supported by the current version of modular_cli. 
+Description: Here are the commands supported by the current version of modular_cli.
 IMPORTANT: The scope of commands you can execute depends on your user permissions
 Usage: modular_cli [module] group [subgroup] command [parameters]
 Options:
-  --help     Show this message and exit.
+  --help     Show this message and exit
 
 Available groups:
   setting
@@ -590,12 +641,12 @@ Usage: modular_cli tenant describe [parameters]
 Parameters:
     --tenant,              -tn,     Apply filter by tenant display name
     --customer_id,         -cid,    Apply filter by customer
-    --cloud,               -c,      Apply filter by cloud AZURE|GOOGLE|AWS|OPEN_STACK|HARDWARE|YANDEX|WORKSPACE|ENTERPRISE|VSPHERE|VMWARE|NUTANIX
+    --cloud,               -c,      Apply filter by cloud AZURE|GOOGLE|AWS|...
     --active,              -A,      Apply filter by active
-    --account,             -acc,    Apply filter by tenant's account. This parameter is case sensitive
-    --get_linked_tenants,  -glt,    Flag. Set this flag if you wish to retrieve linked tenants
-    --json,                         Use this parameter to show command's response in a JSON view.
-    --table,                        Use this parameter to show command's response in a Table view.
+    --account,             -acc,    Apply filter by tenant's account
+    --get_linked_tenants,  -glt,    Flag. Retrieve linked tenants
+    --json,                         Show response in JSON view
+    --table,                        Show response in Table view
 ```
 
 ### Command Execution Examples
@@ -639,13 +690,17 @@ modular_cli chef add_configuration \
 
 Most commands support these common parameters:
 
-* `--json`: Output response in JSON format
-* `--table`: Output response in table format
-* `--help`: Display command-specific help
+| Parameter  | Description                     |
+|------------|---------------------------------|
+| `--json`   | Output response in JSON format  |
+| `--table`  | Output response in table format |
+| `--help`   | Display command-specific help   |
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="output_formats"></a>
+<a name="5-output-formats"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 5. Output Formats
 
@@ -759,10 +814,12 @@ Output (truncated):
 
 **Use cases for JSON output:**
 
-* **Automation scripts**: Parse output programmatically
-* **CI/CD pipelines**: Process results in build scripts
-* **Logging**: Store structured logs for analysis
-* **Integration**: Feed data into other tools
+| Use Case           | Description                        |
+|--------------------|------------------------------------|
+| Automation scripts | Parse output programmatically      |
+| CI/CD pipelines    | Process results in build scripts   |
+| Logging            | Store structured logs for analysis |
+| Integration        | Feed data into other tools         |
 
 **Example: Parsing JSON in Bash**
 
@@ -806,10 +863,12 @@ modular_cli tenant describe --tenant AWS-MSTR-DEV --table
 
 **Use cases for table output:**
 
-* **Human-readable reports**: Easy to read in terminal
-* **Documentation**: Copy-paste into documents
-* **Presentations**: Clear visual format
-* **Quick checks**: Rapid information scanning
+| Use Case               | Description                |
+|------------------------|----------------------------|
+| Human-readable reports | Easy to read in terminal   |
+| Documentation          | Copy-paste into documents  |
+| Presentations          | Clear visual format        |
+| Quick checks           | Rapid information scanning |
 
 ### Response Structure
 
@@ -827,15 +886,19 @@ All responses follow this structure:
 
 **Fields:**
 
-* **status**: Operation result (`SUCCESS` or `FAILED`)
-* **code**: HTTP status code (200, 400, 401, 403, 404, 500, etc.)
-* **message**: Response data (format depends on command)
-* **warnings**: Non-critical warnings during execution
-* **meta**: Additional metadata
+| Field      | Description                                     |
+|------------|-------------------------------------------------|
+| `status`   | Operation result (`SUCCESS` or `FAILED`)        |
+| `code`     | HTTP status code (200, 400, 401, 403, 404, 500) |
+| `message`  | Response data (format depends on command)       |
+| `warnings` | Non-critical warnings during execution          |
+| `meta`     | Additional metadata                             |
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="autocomplete"></a>
+<a name="6-autocomplete"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 6. Autocomplete
 
@@ -843,8 +906,11 @@ Modular-CLI supports command autocompletion for enhanced productivity on Unix-ba
 
 **Supported Shells:**
 
-* Bash
-* Zsh
+| Shell              | Supported  |
+|--------------------|------------|
+| Bash               | ✓          |
+| Zsh                | ✓          |
+| Windows PowerShell | ✗          |
 
 **NOTE:** Autocomplete is not available on Windows. Attempting to enable it on Windows will result in an error:
 
@@ -914,26 +980,11 @@ Close and reopen your terminal for changes to take effect.
 
 After enabling autocomplete, you can use Tab key to complete commands:
 
-**Complete group names:**
-
-```bash
-modular_cli ten[TAB]
-# Result: modular_cli tenant
-```
-
-**Complete command names:**
-
-```bash
-modular_cli tenant des[TAB]
-# Result: modular_cli tenant describe
-```
-
-**View available options:**
-
-```bash
-modular_cli tenant describe --[TAB][TAB]
-# Result: --tenant --customer_id --cloud --active --account --get_linked_tenants --json --table
-```
+| Action                 | Command                                    | Result                        |
+|------------------------|--------------------------------------------|-------------------------------|
+| Complete group names   | `modular_cli ten[TAB]`                     | `modular_cli tenant`          |
+| Complete command names | `modular_cli tenant des[TAB]`              | `modular_cli tenant describe` |
+| View available options | `modular_cli tenant describe --[TAB][TAB]` | Shows all available flags     |
 
 ### Disable Autocomplete
 
@@ -997,9 +1048,11 @@ sudo rm /usr/local/bin/modular_cli
 sudo ln -s /path/to/venv/bin/modular_cli /usr/local/bin/modular_cli
 ```
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="advanced_configuration"></a>
+<a name="7-advanced-configuration"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 7. Advanced Configuration
 
@@ -1007,14 +1060,22 @@ sudo ln -s /path/to/venv/bin/modular_cli /usr/local/bin/modular_cli
 
 Modular-CLI supports several environment variables for advanced configuration:
 
+| Variable                   | Description                 | Default                |
+|----------------------------|-----------------------------|------------------------|
+| `MODULAR_CLI_LOG_PATH`     | Custom path for log files   | `~/.modular_cli/logs/` |
+| `MODULAR_CLI_ENTRY_POINT`  | Custom command name         | `modular_cli`          |
+| `MODULAR_CLI_LOG_LEVEL`    | Logging verbosity level     | `INFO`                 |
+
 #### MODULAR_CLI_LOG_PATH
 
 Custom path for storing Modular-CLI log files.
 
 **Default locations:**
 
-* **Linux/Mac**: `~/.modular_cli/logs/`
-* **Windows**: `C:\Users\<Username>\.modular_cli\logs\`
+| Platform  | Path                                     |
+|-----------|------------------------------------------|
+| Linux/Mac | `~/.modular_cli/logs/`                   |
+| Windows   | `C:\Users\<Username>\.modular_cli\logs\` |
 
 **Example:**
 
@@ -1026,8 +1087,6 @@ modular_cli login
 #### MODULAR_CLI_ENTRY_POINT
 
 Custom command name for Modular-CLI.
-
-**Default:** `modular_cli`
 
 **Example:**
 
@@ -1043,9 +1102,13 @@ modular --help
 
 Logging verbosity level.
 
-**Possible values:** `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`
-
-**Default:** `INFO`
+| Level      | Description                        |
+|------------|------------------------------------|
+| `DEBUG`    | Detailed information for debugging |
+| `INFO`     | General operational information    |
+| `WARNING`  | Warning messages only              |
+| `ERROR`    | Error messages only                |
+| `CRITICAL` | Critical errors only               |
 
 **Example:**
 
@@ -1140,9 +1203,11 @@ Debug output includes:
 * Parameter validation
 * Error stack traces
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="modular_cli_schema"></a>
+<a name="8-modular-cli-schema"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 8. Modular-CLI Schema
 
@@ -1152,7 +1217,7 @@ Debug output includes:
 
 ### Request Flow
 
-**Authentication Flow:**
+#### Authentication Flow
 
 1. User executes `modular_cli login`
 2. CLI reads credentials from local configuration
@@ -1161,7 +1226,7 @@ Debug output includes:
 5. Caches token and metadata locally
 6. Generates dynamic Click commands from metadata
 
-**Command Execution Flow:**
+#### Command Execution Flow
 
 1. User executes command: `modular_cli tenant describe`
 2. CLI validates command exists in cached metadata
@@ -1172,6 +1237,8 @@ Debug output includes:
 7. Modular-API executes command on backend module
 8. Modular-API returns response
 9. CLI formats and displays response
+
+[//]: # ({{ pagebreak }})
 
 ### Component Interaction
 
@@ -1227,9 +1294,11 @@ Debug output includes:
 └─────────────────────────────────────────────────────┘
 ```
 
-[Content ↑](#content)
+[Content ↑](#table-of-contents)
 
-<a name="annexes"></a>
+<a name="9-annexes"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 9. Annexes
 
@@ -1238,6 +1307,13 @@ Debug output includes:
 ### Annex 1: Common Use Cases
 
 This annex provides real-world examples and workflows for common Modular-CLI tasks.
+
+- [Use Case 1: First-Time Setup](#use-case-1-first-time-setup)
+- [Use Case 2: Automation Script](#use-case-2-automation-script)
+- [Use Case 3: CI/CD Integration](#use-case-3-cicd-integration)
+- [Use Case 4: Batch Operations](#use-case-4-batch-operations)
+- [Use Case 5: Monitoring Script](#use-case-5-monitoring-script)
+- [Use Case 6: Python Integration](#use-case-6-python-integration)
 
 #### Use Case 1: First-Time Setup
 
@@ -1278,6 +1354,8 @@ modular_cli health_check
 modular_cli version --detailed
 modular_cli --help
 ```
+
+[↑ Back to Use Cases](#annex-1-common-use-cases)
 
 #### Use Case 2: Automation Script
 
@@ -1326,6 +1404,8 @@ fi
 chmod +x export_tenants.sh
 ./export_tenants.sh
 ```
+
+[↑ Back to Use Cases](#annex-1-common-use-cases)
 
 #### Use Case 3: CI/CD Integration
 
@@ -1377,6 +1457,8 @@ verify_tenant:
   dependencies:
     - setup_modular
 ```
+
+[↑ Back to Use Cases](#annex-1-common-use-cases)
 
 #### Use Case 4: Batch Operations
 
@@ -1440,6 +1522,8 @@ chmod +x batch_describe.sh
 ./batch_describe.sh
 ```
 
+[↑ Back to Use Cases](#annex-1-common-use-cases)
+
 #### Use Case 5: Monitoring Script
 
 **Scenario:** Monitor API health and alert on failures.
@@ -1497,6 +1581,8 @@ while true; do
     sleep ${CHECK_INTERVAL}
 done
 ```
+
+[↑ Back to Use Cases](#annex-1-common-use-cases)
 
 #### Use Case 6: Python Integration
 
@@ -1594,11 +1680,27 @@ chmod +x tenant_manager.py
 ./tenant_manager.py
 ```
 
+[↑ Back to Use Cases](#annex-1-common-use-cases)
+
 <a name="annex-2-troubleshooting-guide"></a>
 
 ### Annex 2: Troubleshooting Guide
 
 This annex provides solutions to common issues encountered when using Modular-CLI.
+
+- [Issue 1: Command Not Found](#issue-1-command-not-found)
+- [Issue 2: Authentication Failed](#issue-2-authentication-failed)
+- [Issue 3: Token Expired](#issue-3-token-expired)
+- [Issue 4: Permission Denied](#issue-4-permission-denied)
+- [Issue 5: Connection Timeout](#issue-5-connection-timeout)
+- [Issue 6: SSL Certificate Error](#issue-6-ssl-certificate-error)
+- [Issue 7: Command Not Available](#issue-7-command-not-available)
+- [Issue 8: Invalid Parameter](#issue-8-invalid-parameter)
+- [Issue 9: Configuration Corrupted](#issue-9-configuration-corrupted)
+- [Issue 10: Rate Limit Exceeded](#issue-10-rate-limit-exceeded)
+- [Issue 11: JSON Parse Error](#issue-11-json-parse-error)
+- [Issue 12: Module Not Found](#issue-12-module-not-found)
+- [Getting Help](#getting-help)
 
 #### Issue 1: Command Not Found
 
@@ -1611,9 +1713,11 @@ modular_cli --help
 
 **Causes:**
 
-* Virtual environment not activated
-* Modular-CLI not installed
-* Incorrect entry point name
+| Cause                             | Description                   |
+|-----------------------------------|-------------------------------|
+| Virtual environment not activated | CLI only available in venv    |
+| Modular-CLI not installed         | Package not installed         |
+| Incorrect entry point name        | Custom entry point configured |
 
 **Solutions:**
 
@@ -1631,6 +1735,8 @@ pip install --force-reinstall /path/to/modular-cli
 echo $MODULAR_CLI_ENTRY_POINT
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 2: Authentication Failed
 
 **Problem:**
@@ -1642,9 +1748,11 @@ modular_cli login
 
 **Causes:**
 
-* Incorrect username or password
-* User account blocked in Modular-API
-* API server unreachable
+| Cause                  | Description                     |
+|------------------------|---------------------------------|
+| Incorrect credentials  | Wrong username or password      |
+| User account blocked   | Account disabled in Modular-API |
+| API server unreachable | Network connectivity issues     |
 
 **Solutions:**
 
@@ -1664,6 +1772,8 @@ curl https://your-api-server.com/integration/health
 cat ~/.modular_cli/logs/modular_cli.log
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 3: Token Expired
 
 **Problem:**
@@ -1673,29 +1783,22 @@ modular_cli tenant describe
 # Error: Token expired. Please login again.
 ```
 
-**Cause:**
-
-* Access token has expired (default: 24 hours) and refresh token failed
-* Refresh token has expired (default: 14 days)
-* Cached tokens are corrupted
-
 **Understanding Token Lifecycle:**
 
-Modular-CLI uses two types of tokens:
-- **Access token**: Valid for 24 hours, used for command execution
-- **Refresh token**: Valid for 14 days, used to automatically renew access tokens
+| Token Type        | Validity   | Purpose                                   |
+|-------------------|------------|-------------------------------------------|
+| **Access Token**  | 24 hours   | Used for command execution                |
+| **Refresh Token** | 14 days    | Used to automatically renew access tokens |
 
 **Automatic Refresh:**
 
 When your access token expires (after 24 hours), Modular-CLI automatically uses the refresh token to get a new access token. This happens transparently without user action.
 
+**Manual Login Required When:**
 
-**Manual Login Required:**
-
-You only need to manually login when:
-- Refresh token expires (after 14 days of no activity)
-- Tokens are corrupted or invalid
-- You see "Token expired" error despite automatic refresh
+* Refresh token expires (after 14 days of no activity)
+* Tokens are corrupted or invalid
+* You see "Token expired" error despite automatic refresh
 
 **Solution:**
 
@@ -1706,9 +1809,10 @@ modular_cli login
 
 **Prevention:**
 
-To avoid manual logins:
-- Use Modular-CLI at least once every 14 days to keep refresh token active
-- Automated scripts should handle authentication errors and re-login automatically
+* Use Modular-CLI at least once every 14 days to keep refresh token active
+* Automated scripts should handle authentication errors and re-login automatically
+
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
 
 #### Issue 4: Permission Denied
 
@@ -1721,8 +1825,10 @@ modular_cli tenant deactivate_region --tenant AWS-TEST --cloud AWS --all_regions
 
 **Causes:**
 
-* User doesn't have required permissions
-* Command not allowed by user's policies
+| Cause                        | Description                       |
+|------------------------------|-----------------------------------|
+| Missing permissions          | User lacks required policy access |
+| Command restricted by policy | Command explicitly denied         |
 
 **Solutions:**
 
@@ -1737,6 +1843,8 @@ modular_cli --help
 # Administrator should update your group policies
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 5: Connection Timeout
 
 **Problem:**
@@ -1748,9 +1856,11 @@ modular_cli tenant describe
 
 **Causes:**
 
-* API server is down
-* Network connectivity issues
-* Firewall blocking connection
+| Cause             | Description                 |
+|-------------------|-----------------------------|
+| API server down   | Server not running          |
+| Network issues    | Connectivity problems       |
+| Firewall blocking | Port/IP blocked             |
 
 **Solutions:**
 
@@ -1764,6 +1874,8 @@ ping api-server-domain.com
 # 3. Verify firewall rules (contact network admin)
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 6: SSL Certificate Error
 
 **Problem:**
@@ -1775,9 +1887,11 @@ modular_cli login
 
 **Causes:**
 
-* Self-signed certificate
-* Expired certificate
-* Certificate chain issues
+| Cause                    | Description                     |
+|--------------------------|---------------------------------|
+| Self-signed certificate  | Certificate not from trusted CA |
+| Expired certificate      | Certificate validity expired    |
+| Certificate chain issues | Incomplete certificate chain    |
 
 **Solutions:**
 
@@ -1791,6 +1905,8 @@ export PYTHONHTTPSVERIFY=0
 modular_cli login
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 7: Command Not Available
 
 **Problem:**
@@ -1802,9 +1918,11 @@ modular_cli chef add_configuration
 
 **Causes:**
 
-* Command not in your policy
-* Module not installed on server
-* Typo in command name
+| Cause                 | Description              |
+|-----------------------|--------------------------|
+| Command not in policy | User lacks permission    |
+| Module not installed  | Module missing on server |
+| Typo in command       | Incorrect command name   |
 
 **Solutions:**
 
@@ -1820,6 +1938,8 @@ modular_cli chef --help
 
 # 4. Contact admin to grant permissions
 ```
+
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
 
 #### Issue 8: Invalid Parameter
 
@@ -1838,6 +1958,8 @@ modular_cli tenant describe --tenant AWS-TEST --invalid_param value
 # Check command help for valid parameters
 modular_cli tenant describe --help
 ```
+
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
 
 #### Issue 9: Configuration Corrupted
 
@@ -1866,6 +1988,8 @@ modular_cli setup \
 modular_cli login
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 10: Rate Limit Exceeded
 
 **Problem:**
@@ -1891,6 +2015,8 @@ for tenant in $(cat tenants.txt); do
 done
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 11: JSON Parse Error
 
 **Problem:**
@@ -1902,8 +2028,10 @@ modular_cli tenant describe --json
 
 **Causes:**
 
-* API returned non-JSON response
-* Response contains invalid JSON
+| Cause               | Description                      |
+|---------------------|----------------------------------|
+| Non-JSON response   | API returned unexpected format   |
+| Invalid JSON        | Response contains malformed JSON |
 
 **Solutions:**
 
@@ -1921,6 +2049,8 @@ cat ~/.modular_cli/logs/modular_cli.log
 # 4. Report issue to support with debug logs
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Issue 12: Module Not Found
 
 **Problem:**
@@ -1932,8 +2062,10 @@ modular_cli chef add_configuration
 
 **Causes:**
 
-* Module not installed on server
-* Module not available for your user
+| Cause                | Description                      |
+|----------------------|----------------------------------|
+| Module not installed | Module missing on server         |
+| Module not available | Module not in user's permissions |
 
 **Solutions:**
 
@@ -1947,63 +2079,81 @@ modular_cli login
 # 3. Contact admin to install module
 ```
 
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
 #### Getting Help
 
 If issues persist after trying these solutions:
 
-1. **Collect Information:**
-   ```bash
-   # Get version info
-   modular_cli version --detailed > version_info.txt
-   
-   # Get logs
-   cat ~/.modular_cli/logs/modular_cli.log > cli_logs.txt
-   
-   # Get configuration (remove sensitive data)
-   cat ~/.modular_cli/credentials > config_info.txt
-   ```
+**1. Collect Information:**
 
-2. **Contact Support:**
-   * Email: SupportSyndicateTeam@epam.com
-   * Include: version info, logs, and detailed issue description
-   * Response time: 5 business days
+```bash
+# Get version info
+modular_cli version --detailed > version_info.txt
 
-[Content ↑](#content)
+# Get logs
+cat ~/.modular_cli/logs/modular_cli.log > cli_logs.txt
 
-<a name="project_information"></a>
+# Get configuration (remove sensitive data)
+cat ~/.modular_cli/credentials > config_info.txt
+```
+
+**2. Contact Support:**
+
+| Contact        | Details                                            |
+|----------------|----------------------------------------------------|
+| Email          | SupportSyndicateTeam@epam.com                      |
+| Include        | Version info, logs, and detailed issue description |
+| Response time  | 5 business days                                    |
+
+[↑ Back to Troubleshooting](#annex-2-troubleshooting-guide)
+
+[Content ↑](#table-of-contents)
+
+<a name="10-project-information"></a>
+
+[//]: # ({{ pagebreak }})
 
 ## 10. Project Information
 
-### Modular-CLI
+### Project Links
 
-**Source Code**: https://github.com/epam/modular-cli  
-**Documentation**: https://github.com/epam/modular-cli/blob/main/README.md  
-**Changelog**: https://github.com/epam/modular-cli/blob/main/CHANGELOG.md  
-**Supported Python Version**: 3.10+
+| Resource          | URL                                                        |
+|-------------------|------------------------------------------------------------|
+| **Source Code**   | https://github.com/epam/modular-cli                        |
+| **Documentation** | https://github.com/epam/modular-cli/blob/main/README.md    |
+| **Changelog**     | https://github.com/epam/modular-cli/blob/main/CHANGELOG.md |
 
 ### Related Projects
 
-* **Modular-API**: https://github.com/epam/modular-api
-* **Modular-SDK**: https://github.com/epam/modular-sdk
-* **Modular-CLI-SDK**: https://github.com/epam/modular-cli-sdk
+| Project             | URL                                     |
+|---------------------|-----------------------------------------|
+| **Modular-API**     | https://github.com/epam/modular-api     |
+| **Modular-SDK**     | https://github.com/epam/modular-sdk     |
+| **Modular-CLI-SDK** | https://github.com/epam/modular-cli-sdk |
 
 ### Support
 
-**Email**: SupportSyndicateTeam@epam.com  
-**Response Time**: 7 calendar days (5 business days, excluding weekends)
+| Contact            | Details                                               |
+|--------------------|-------------------------------------------------------|
+| **Email**          | SupportSyndicateTeam@epam.com                         |
+| **Response Time**  | 7 calendar days (5 business days, excluding weekends) |
+| **Python Version** | 3.10+                                                 |
 
 ### How to Report an Issue
 
 When reporting issues, provide:
 
-1. **Python version**: Run `python --version`
-2. **Modular-CLI version**: Run `modular_cli version --detailed`
-3. **Modular-API version**: Included in version output
-4. **Clear description**: Concise issue description
-5. **Steps to reproduce**: Detailed reproduction steps
-6. **Error messages**: Complete error output
-7. **Log files**: Contents of `~/.modular_cli/logs/modular_cli.log`
-8. **Environment details**: OS, shell type, network setup
+| Information         | How to Obtain                         |
+|---------------------|---------------------------------------|
+| Python version      | `python --version`                    |
+| Modular-CLI version | `modular_cli version --detailed`      |
+| Modular-API version | Included in version output            |
+| Clear description   | Concise issue description             |
+| Steps to reproduce  | Detailed reproduction steps           |
+| Error messages      | Complete error output                 |
+| Log files           | `~/.modular_cli/logs/modular_cli.log` |
+| Environment details | OS, shell type, network setup         |
 
 **Example Issue Report:**
 
@@ -2042,11 +2192,13 @@ SSL verification error prevents authentication.
 
 ### Communication Tips
 
-1. **Be clear and concise** in your issue description
-2. **Provide all necessary information** upfront
-3. **Include command outputs and logs**
-4. **Mask sensitive information** (passwords, tokens, URLs)
-5. **Be respectful and patient** - support team responds within 5 business days
+| Tip                               | Description                             |
+|-----------------------------------|-----------------------------------------|
+| Be clear and concise              | Keep issue description focused          |
+| Provide all necessary information | Include all required details upfront    |
+| Include command outputs and logs  | Attach relevant output                  |
+| Mask sensitive information        | Remove passwords, tokens, internal URLs |
+| Be respectful and patient         | Support responds within 5 business days |
 
 ### Version Information
 
@@ -2064,12 +2216,4 @@ python --version
 pip --version
 ```
 
-### License
-
-Please refer to the project repository for licensing information.
-
-[Content ↑](#content)
-
-**Last Updated**: November 2025  
-**Document Version**: 2.0.0  
-**Company**: EPAM
+[Content ↑](#table-of-contents)

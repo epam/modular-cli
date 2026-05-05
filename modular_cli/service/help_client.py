@@ -3,6 +3,7 @@ import os
 from abc import abstractmethod, ABC
 import sys
 from http import HTTPStatus
+from typing import Any
 
 import click
 from tabulate import tabulate
@@ -19,6 +20,7 @@ from modular_cli.service.initializer import init_configuration
 from modular_cli.service.utils import (
     save_meta_to_file, MODULAR_CLI_META_DIR, get_deprecation_tag,
     format_command_warnings_block_styled,
+    format_group_deprecation_info,
 )
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
@@ -26,6 +28,7 @@ from modular_cli.utils.variables import (
 )
 from modular_cli.utils.exceptions import (
     ModularCliBadRequestException, ModularCliInternalException,
+    ModularCliConfigurationException,
 )
 from modular_cli.version import __version__
 from modular_cli.service.config import ConfigurationProvider
@@ -36,7 +39,7 @@ META_JSON = 'commands_meta.json'
 ROOT_META_JSON = 'root_commands.json'
 
 HELP_STUB = (
-    f'Here are the commands supported by the current version of {ENTRY_POINT}. '
+    f'Here are the commands supported by the current version of {ENTRY_POINT} '
     f'\nIMPORTANT: The scope of commands you can execute depends on your user '
     f'permissions'
 )
@@ -44,7 +47,7 @@ HELP_STUB = (
 GENERAL_HELP_STRING = """Description: {help_stub}
 Usage: {entry_point} [module] group [subgroup] command [parameters]
 Options:
-  --help     Show this message and exit.
+  --help     Show this message and exit
   
 """
 
@@ -81,8 +84,7 @@ class HelpProcessor:
 
     @staticmethod
     def resolve_parameters_from_appropriate_command(appropriate_command):
-        command_description = appropriate_command['command_meta'][
-            'description']
+        command_description = appropriate_command['command_meta']['description']
         group = appropriate_command['group']
         subgroup = appropriate_command.get('subgroup', '')
         command_parameters = appropriate_command['command_meta']['parameters']
@@ -90,8 +92,9 @@ class HelpProcessor:
 
     @staticmethod
     def resolve_parameters_from_appropriate_commands(appropriate_commands):
-        commands = [command['command_meta']['name']
-                    for command in appropriate_commands]
+        commands = [
+            command['command_meta']['name'] for command in appropriate_commands
+        ]
         appropriate_command = appropriate_commands[0]
         group = appropriate_command['group']
         subgroup = appropriate_command.get('subgroup', '')
@@ -125,7 +128,8 @@ class HelpProcessor:
             table_data.append([
                 '\t',
                 '\t',
-                f'{each_param}'])
+                f'{each_param}'],
+            )
         return tabulate(tabular_data=table_data, tablefmt="plain")
 
     @staticmethod
@@ -155,56 +159,271 @@ class HelpProcessor:
         # For listings, hide commands marked as hidden
         return not is_hidden
 
+    def _should_show_group(
+            self,
+            group_meta: dict,
+            is_specific_request: bool,
+    ) -> bool:
+        """
+        Determine if a group should be shown in help listings.
+
+        :param group_meta: The group metadata dictionary
+        :param is_specific_request: True if user specifically requested this group
+        :return: True if group should be shown, False otherwise
+        """
+        is_hidden = group_meta.get('is_group_hidden', False)
+        # If it's a specific request for this group, show it even if hidden
+        if is_specific_request:
+            return True
+        # For listings, hide groups marked as hidden
+        return not is_hidden
+
     def get_help_message(self, token_meta: dict):
-        if token_meta.get('route'):
-            # Specific command help requested - show even if hidden
+        # Check if this is a command (has 'route')
+        if isinstance(token_meta, dict) and token_meta.get('route'):
             return self.prepare_command_help(
                 token_meta=token_meta,
                 specified_tokens=self.requested_command,
             )
 
+        # Check for group-level deprecation (when viewing group help)
+        group_deprecation_warning = ""
+        parent_deprecations = []
+
+        if isinstance(token_meta, dict):
+            parent_deprecations = token_meta.get('_parent_deprecations', [])
+
+        if parent_deprecations:
+            warnings = []
+            for parent in parent_deprecations:
+                deprecation = parent.get('deprecation')
+                if deprecation:
+                    warning = format_group_deprecation_info(deprecation)
+                    if warning:
+                        warnings.append(warning)
+            if warnings:
+                group_deprecation_warning = "\n\n".join(warnings) + "\n\n"
+
+        # Get current group info for better help display
+        current_group_info = None
+        if isinstance(token_meta, dict):
+            current_group_info = token_meta.get('_current_group_info')
+
         level_token_types = {}
-        for token_name, value in token_meta.items():
-            token_type = value.get('type')
-            if token_type is None:
-                token_type = 'command'
 
-            # Check if this is a command and if it should be hidden from listing
-            if token_type == 'command':
-                # For general help listings, skip hidden commands
-                body = value.get('body', {})
-                if body.get('is_command_hidden', False):
-                    continue  # Skip hidden commands in listings
-
-                # Add deprecation tag for deprecated commands in listings
-                deprecation_info = body.get('deprecation')
-                if deprecation_info:
-                    tag = get_deprecation_tag(deprecation_info)
-                    token_name = token_name + tag
-
-            if not level_token_types.get(token_type):
-                level_token_types.update({token_type: []})
-            level_token_types.get(token_type).append(token_name)
-
-        if not level_token_types:
+        if not isinstance(token_meta, dict):
             return ANY_COMMANDS_AVAILABLE_HELP.format(help_stub=HELP_STUB)
 
-        help_str: str = GENERAL_HELP_STRING.format(
-            help_stub=HELP_STUB, entry_point=ENTRY_POINT)
-        if level_token_types.get('root command'):
-            root_command = level_token_types.pop('root command')
-            if level_token_types.get('command'):
-                level_token_types['command'].extend(root_command)
-            else:
-                level_token_types['command'] = root_command
-        for _type, names_list in level_token_types.items():
-            names = "\n\t".join(sorted(names_list))
-            help_str = help_str + f"Available {_type}s:\n\t{names}\n"
+        for token_name, value in token_meta.items():
+            # Skip internal keys
+            if token_name.startswith('_'):
+                continue
+
+            if not isinstance(value, dict):
+                continue
+
+            token_type = value.get('type')
+
+            # Determine type if not explicitly set
+            if token_type is None:
+                body = value.get('body', {})
+                if isinstance(body, dict) and body.get('route'):
+                    token_type = 'command'
+                elif 'route' in value:
+                    token_type = 'command'
+                else:
+                    token_type = 'command'
+
+            # Check if this is a group and if it should be hidden from listing
+            if token_type == 'group':
+                # Check if user specifically requested this group
+                is_specific_request = (
+                        len(self.requested_command) > 0 and
+                        token_name in self.requested_command
+                )
+                if not self._should_show_group(value, is_specific_request):
+                    continue  # Skip hidden groups in listings
+
+            # Check if this is a command and if it should be hidden from listing
+            if token_type in ('command', 'root command'):
+                # For general help listings, skip hidden commands
+                body = value.get('body', {})
+                is_hidden = isinstance(body, dict) \
+                            and body.get('is_command_hidden') is True
+                if is_hidden:
+                    continue
+
+            # Build display name with description
+            display_name = token_name
+            description = self._get_item_description(value)
+
+            # Add deprecation tag for deprecated commands
+            if token_type in ('command', 'root command'):
+                body = value.get('body', {})
+                if isinstance(body, dict):
+                    deprecation_info = body.get('deprecation')
+                    if deprecation_info:
+                        tag = get_deprecation_tag(deprecation_info)
+                        display_name = display_name + tag
+
+            # Add deprecation tag for deprecated GROUPS
+            elif token_type == 'group':
+                deprecation_info = value.get('deprecation')
+                if deprecation_info:
+                    tag = get_deprecation_tag(deprecation_info)
+                    display_name = display_name + tag
+
+            if token_type not in level_token_types:
+                level_token_types[token_type] = []
+
+            # Store as tuple (name, description) for formatting
+            level_token_types.get(token_type).append((display_name, description))
+
+        # Build help string based on whether we're viewing a specific group or root
+        if current_group_info and self.requested_command:
+            # Specific group help
+            help_str = self._build_group_help_string(
+                current_group_info=current_group_info,
+                group_deprecation_warning=group_deprecation_warning,
+                level_token_types=level_token_types,
+            )
+        else:
+            # Root help or no group info
+            if not level_token_types:
+                help_str = ANY_COMMANDS_AVAILABLE_HELP.format(
+                    help_stub=HELP_STUB)
+                if group_deprecation_warning:
+                    help_str = group_deprecation_warning + help_str
+                return help_str
+
+            help_str = GENERAL_HELP_STRING.format(
+                help_stub=HELP_STUB,
+                entry_point=ENTRY_POINT,
+            )
+
+            if level_token_types.get('root command'):
+                root_command = level_token_types.pop('root command')
+                if level_token_types.get('command'):
+                    level_token_types['command'].extend(root_command)
+                else:
+                    level_token_types['command'] = root_command
+
+            for _type, items_list in level_token_types.items():
+                sorted_items = sorted(items_list, key=lambda x: x[0])
+                formatted_items = \
+                    self._format_items_with_descriptions(sorted_items)
+                help_str = help_str + f"Available {_type}s:\n{formatted_items}\n"
+
+            if group_deprecation_warning:
+                help_str = group_deprecation_warning + help_str
+
         return help_str
+
+    def _build_group_help_string(
+            self,
+            current_group_info: dict,
+            group_deprecation_warning: str,
+            level_token_types: dict,
+    ) -> str:
+        """Build help string for a specific group."""
+        group_description = current_group_info.get('description', '')
+
+        parts = []
+
+        # Add deprecation warning FIRST (same as command help)
+        if group_deprecation_warning:
+            parts.append(group_deprecation_warning.strip())
+            parts.append("")
+
+        # Add general help header
+        parts.append(HELP_STUB)
+        parts.append(
+            f"Usage: {ENTRY_POINT} [module] group [subgroup] command [parameters]"
+        )
+
+        # Add group description
+        if group_description:
+            parts.append("Description:")
+            clean_description = ' '.join(group_description.split())
+            parts.append(f"  {clean_description}")
+
+        # Add options section
+        parts.append("")
+        parts.append("Options:")
+        parts.append("  --help  Show this message and exit")
+
+        # Add commands/subgroups if any
+        if level_token_types:
+            if level_token_types.get('root command'):
+                root_command = level_token_types.pop('root command')
+                if level_token_types.get('command'):
+                    level_token_types['command'].extend(root_command)
+                else:
+                    level_token_types['command'] = root_command
+
+            for _type, items_list in level_token_types.items():
+                sorted_items = sorted(items_list, key=lambda x: x[0])
+                formatted_items = self._format_items_with_descriptions(
+                    sorted_items)
+                parts.append("")
+                parts.append(f"Available {_type}s:")
+                parts.append(formatted_items)
+
+        # Add trailing newline for consistency with other help outputs
+        parts.append("")
+        return "\n".join(parts)
+
+    @staticmethod
+    def _get_item_description(value: dict) -> str:
+        # First check top-level description
+        if 'description' in value:
+            desc = value.get('description', '')
+            if desc:
+                return desc
+
+        # Then check inside body
+        body = value.get('body', {})
+        if isinstance(body, dict) and 'description' in body:
+            return body.get('description', '')
+
+        return ''
+
+    @staticmethod
+    def _format_items_with_descriptions(
+            items: list[tuple[str, str]],
+            max_name_width: int = 24,
+    ) -> str:
+        """
+        Format items with their descriptions in aligned columns.
+
+        :param items: List of (name, description) tuples
+        :param max_name_width: Maximum width for name column
+        :return: Formatted string with items and descriptions
+        """
+        if not items:
+            return ''
+
+        lines = []
+        for name, description in items:
+            if description:
+                # Truncate long descriptions
+                desc_max_len = 50
+                if len(description) > desc_max_len:
+                    description = description[:desc_max_len - 3] + '...'
+                # Clean up description (remove newlines, extra spaces)
+                description = ' '.join(description.split())
+                # Format with padding
+                padded_name = name.ljust(max_name_width)
+                lines.append(f"\t{padded_name} - {description}")
+            else:
+                lines.append(f"\t{name}")
+
+        return '\n'.join(lines)
 
     def generate_module_meta(self, modules_meta, requested_command):
         prepared_command_path = self.prepare_command_path(
-            requested_command=requested_command)
+            requested_command=requested_command,
+        )
 
         subgroups_name = []
         commands_names = []
@@ -219,14 +438,16 @@ class HelpProcessor:
         module_commands = modules_meta.get(pretty_module_name)
         if not module_commands:
             raise ModularCliBadRequestException(
-                'Can not found requested module')
+                'Can not found requested module'
+            )
 
         for commands_meta in module_commands:
             for group, command_meta in commands_meta.items():
                 command_route_path = command_meta['route']['path']
                 group_name, subgroup_name = \
                     self.extract_subgroup_from_command_path(
-                        command_path=command_route_path)
+                        command_path=command_route_path,
+                    )
 
                 if prepared_command_path not in command_meta['route']['path']:
                     continue
@@ -255,13 +476,14 @@ class HelpProcessor:
                 existed_command_paths.append({
                     'group': group_name,
                     'subgroup': subgroup_name,
-                    'command_meta': command_meta
+                    'command_meta': command_meta,
                 })
 
         if not any([existed_command_paths, subgroups_name, commands_names,
                     groups_name]):
-            raise ModularCliBadRequestException('Invalid group or command '
-                                                  'requested')
+            raise ModularCliBadRequestException(
+                'Invalid group or command requested'
+            )
 
         return existed_command_paths, subgroups_name, commands_names, groups_name
 
@@ -271,7 +493,8 @@ class HelpProcessor:
             specified_tokens: list,
     ) -> str:
         pretty_params = self.prettify_command_parameters(
-            command_parameters=token_meta.get('parameters'))
+            command_parameters=token_meta.get('parameters'),
+        )
         if not pretty_params:
             pretty_params = 'No parameters declared'
 
@@ -293,10 +516,45 @@ class HelpProcessor:
             entry_point=ENTRY_POINT,
             command_description=command_description,
             usage=' '.join(specified_tokens),
-            parameters=pretty_params
+            parameters=pretty_params,
         )
 
         return combined_warning + help_string
+
+
+def _filter_hidden_items(meta: dict, is_specific_request: bool) -> dict:
+    """
+    Filter out hidden groups and commands from metadata for help display.
+
+    :param meta: The metadata dictionary to filter
+    :param is_specific_request: If True, don't filter (user explicitly requested)
+    :return: Filtered metadata dictionary
+    """
+    if is_specific_request:
+        return meta
+
+    filtered = {}
+    for key, value in meta.items():
+        if not isinstance(value, dict):
+            filtered[key] = value
+            continue
+
+        item_type = value.get('type')
+
+        # Check for hidden groups
+        if item_type == 'group':
+            if value.get('is_group_hidden', False):
+                continue  # Skip hidden groups
+
+        # Check for hidden commands
+        if item_type in ('command', 'root command'):
+            body = value.get('body', {})
+            if body.get('is_command_hidden', False):
+                continue  # Skip hidden commands
+
+        filtered[key] = value
+
+    return filtered
 
 
 def extract_root_commands(admin_home_path):
@@ -308,8 +566,8 @@ def extract_root_commands(admin_home_path):
         return root_commands
     else:
         raise ModularCliInternalException(
-            'CLI root commands file  is missing , '
-            'please write support team.')
+            'CLI root commands file  is missing, please write support team.'
+        )
 
 
 def retrieve_commands_meta_content():
@@ -328,7 +586,8 @@ def retrieve_commands_meta_content():
         return content
     except Exception:
         raise ModularCliBadRequestException(
-            'Error while CLI meta loading. Please perform login again')
+            'Error while CLI meta loading. Please perform login again'
+        )
 
 
 class AbstractStaticCommands(ABC):
@@ -361,6 +620,7 @@ class AbstractStaticCommands(ABC):
                 if required:
                     missing.append(arg.replace('--', ''))
         if missing:
+            missing = [f"'{param}'" for param in missing]
             raise ModularCliBadRequestException(
                 f'The following parameters are missing: {", ".join(missing)}'
             )
@@ -393,7 +653,7 @@ class SetupCommandHandler(AbstractStaticCommands):
         configure_args = {
             '--api_path': (True, str),
             '--username': (True, str),
-            '--password': (True, str)
+            '--password': (True, str),
         }
         _force_help = True
         for param_name, is_required in configure_args.items():
@@ -403,10 +663,13 @@ class SetupCommandHandler(AbstractStaticCommands):
             self.define_description()
 
         api_path, username, password = self.validate_params(
-            configure_args=configure_args)
-        response = save_configuration(api_link=api_path,
-                                      username=username,
-                                      password=password)
+            configure_args=configure_args,
+        )
+        response = save_configuration(
+            api_link=api_path,
+            username=username,
+            password=password,
+        )
         return CommandResponse(message=response)
 
 
@@ -475,7 +738,8 @@ class LoginCommandHandler(AbstractStaticCommands):
                     value=dict_response.get('refresh_token'),
                 )
                 add_data_to_config(
-                    name='version', value=dict_response.get('version')
+                    name='version',
+                    value=dict_response.get('version'),
                 )
                 warnings = dict_response.get('warnings', [])
                 return CommandResponse(
@@ -593,11 +857,16 @@ class VersionCommandHandler(AbstractStaticCommands):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._config = ConfigurationProvider()
+        self._config = None
+        self._config_warning = None
+        try:
+            self._config = ConfigurationProvider()
+        except ModularCliConfigurationException as e:
+            self._config_warning = str(e)
 
     def define_description(self):
         version_command_help = \
-            f'Usage: {ENTRY_POINT} login [parameters]{os.linesep}' \
+            f'Usage: {ENTRY_POINT} version [parameters]{os.linesep}' \
             f'Parameters:{os.linesep}     --module,   Describes specified ' \
             f'module version{os.linesep}     --detailed,  ' \
             f' Describes all module(s) version'
@@ -613,11 +882,13 @@ class VersionCommandHandler(AbstractStaticCommands):
 
     def _resolve_m3admin_version(self) -> str | None:
         # this one is kind of strange exception
+        if self._config is None:
+            return None
         return self._config.root_admin_version
 
     def execute_command(self):
-        from modular_cli.service.decorators import (CommandResponse, JSON_VIEW,
-                                                    TABLE_VIEW)
+        from modular_cli.service.decorators import \
+            CommandResponse, JSON_VIEW, TABLE_VIEW
         configure_args = {
             '--module': (False, str),
             '--detailed': (False, bool)
@@ -626,10 +897,10 @@ class VersionCommandHandler(AbstractStaticCommands):
         module, detailed = self.validate_params(configure_args=configure_args)
 
         # reserved names
-        versions = {
-            'server': self._config.modular_api_version,
-            'client': __version__
-        }
+        versions = {}
+        if self._config is not None:
+            versions['server'] = self._config.modular_api_version
+        versions['client'] = __version__
 
         if module:
             if module == M3ADMIN_MODULE:  # exception
@@ -656,10 +927,15 @@ class VersionCommandHandler(AbstractStaticCommands):
         #  and ResponseFormatter
         ctx = click.get_current_context()
         if ctx.params.get(JSON_VIEW):
-            click.echo(json.dumps({
+            result: dict[str, Any] = {
                 n: {'version': v} for n, v in versions.items()
-            }, indent=4))
+            }
+            if self._config_warning:
+                result['warning'] = self._config_warning
+            click.echo(json.dumps(result, indent=4))
         elif ctx.params.get(TABLE_VIEW):
+            if self._config_warning:
+                click.echo(f'Warning: {self._config_warning}')
             return CommandResponse(
                 items=[{'name': n, 'version': v} for n, v in versions.items()],
                 table_title='Versions'
@@ -668,4 +944,6 @@ class VersionCommandHandler(AbstractStaticCommands):
             click.echo(os.linesep.join(
                 f'{n.capitalize()}: {v}' for n, v in versions.items())
             )
+            if self._config_warning:
+                click.echo(self._config_warning)
         sys.exit(0)
