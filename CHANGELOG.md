@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+# [2.3.30] - 2026-03-05
+* Fix inconsistent column alignment across help output sections:
+  - Compute a single global column width across all item types (modules, groups, commands)
+  - Ensure description separators (`-`) align uniformly regardless of section
+  - Add `_compute_max_name_width` helper to calculate width from all sections before rendering
+  - Add `fixed_name_width` parameter to `_format_items_with_descriptions` to accept pre-computed width
+
+# [2.3.29] - 2026-02-17
+* Improve help output formatting:
+  - Implement dynamic column width calculation based on longest command name
+  - Add minimum width parameter (24 characters) with auto-expansion for longer names
+  - Fix description truncation to break at word boundaries instead of mid-word
+  - Remove trailing punctuation before adding ellipsis to prevent double periods (e.g., `...` instead of `....`)
+  - Clean up descriptions (remove newlines and extra spaces) before display
+  - Ensure proper alignment of command descriptions in help listings
+* Fix help output display order:
+  - Enforce consistent hierarchical type order: modules → groups → commands
+  - Apply ordering to both root help and group-level help displays
+  - Fix issue where groups could appear after commands in listings
+
+# [2.3.28] - 2026-02-11
+* Add additional notice for the hidden group of commands
+
 # [2.3.27] - 2026-01-14
 * Add group deprecation support:
   - Extend `find_token_meta()` to collect `_parent_deprecations` from parent groups
