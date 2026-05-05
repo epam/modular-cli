@@ -364,6 +364,47 @@ def format_command_warnings_block_styled(
     lines.append(click.style(SEP, fg=color, bold=True))
     return "\n".join(lines)
 
+def format_group_warnings_block_styled(
+        deprecation_info: dict | None = None,
+        is_hidden: bool = False,
+) -> str:
+    """Format combined warning block for group help display."""
+    if not deprecation_info and not is_hidden:
+        return ""
+
+    SEP = "=" * 69
+    lines = []
+
+    # Determine color based on deprecation if present, otherwise cyan for hidden-only
+    if deprecation_info and deprecation_info.get('removal_date'):
+        color = _get_color(deprecation_info['removal_date'])
+    else:
+        color = "cyan"
+
+    lines.append(click.style(text=SEP, fg=color, bold=True))
+
+    # Deprecation warning first
+    if deprecation_info and deprecation_info.get('removal_date'):
+        for line in _format_deprecation_lines(deprecation_info, "command group"):
+            lines.append(click.style(text=line, fg=color, bold=True))
+
+    # Hidden notice second
+    if is_hidden:
+        if deprecation_info and deprecation_info.get('removal_date'):
+            lines.append("")
+        lines.append(click.style(
+            text="NOTICE: This is a HIDDEN command group",
+            fg=color,
+            bold=True,
+        ))
+        lines.append(click.style(
+            text="This command group is not shown in standard help listings",
+            fg=color,
+        ))
+
+    lines.append(click.style(text=SEP, fg=color, bold=True))
+    return "\n".join(lines)
+
 
 def format_group_deprecation_info(deprecation_info: dict | None) -> str:
     """Format deprecation info for group help display."""

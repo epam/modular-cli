@@ -21,6 +21,7 @@ from modular_cli.service.utils import (
     save_meta_to_file, MODULAR_CLI_META_DIR, get_deprecation_tag,
     format_command_warnings_block_styled,
     format_group_deprecation_info,
+    format_group_warnings_block_styled,
 )
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
@@ -189,25 +190,36 @@ class HelpProcessor:
         # Check for group-level deprecation (when viewing group help)
         group_deprecation_warning = ""
         parent_deprecations = []
+        current_group_info = None
 
         if isinstance(token_meta, dict):
             parent_deprecations = token_meta.get('_parent_deprecations', [])
-
-        if parent_deprecations:
-            warnings = []
-            for parent in parent_deprecations:
-                deprecation = parent.get('deprecation')
-                if deprecation:
-                    warning = format_group_deprecation_info(deprecation)
-                    if warning:
-                        warnings.append(warning)
-            if warnings:
-                group_deprecation_warning = "\n\n".join(warnings) + "\n\n"
-
-        # Get current group info for better help display
-        current_group_info = None
-        if isinstance(token_meta, dict):
             current_group_info = token_meta.get('_current_group_info')
+
+        current_group_name = \
+            current_group_info.get('name') if current_group_info else None
+
+        warnings = []
+
+        for parent in parent_deprecations:
+            if current_group_name and parent.get('name') == current_group_name:
+                continue
+            deprecation = parent.get('deprecation')
+            if deprecation:
+                warning = format_group_deprecation_info(deprecation)
+                if warning:
+                    warnings.append(warning)
+
+        if current_group_info:
+            current_warning = format_group_warnings_block_styled(
+                deprecation_info=current_group_info.get('deprecation'),
+                is_hidden=current_group_info.get('is_group_hidden', False),
+            )
+            if current_warning:
+                warnings.append(current_warning)
+
+        if warnings:
+            group_deprecation_warning = "\n\n".join(warnings) + "\n\n"
 
         level_token_types = {}
 
@@ -308,10 +320,20 @@ class HelpProcessor:
                 else:
                     level_token_types['command'] = root_command
 
-            for _type, items_list in level_token_types.items():
+            # Define the desired order for displaying types
+            type_order = ['module', 'group', 'command']
+
+            # Compute a single width across all types for consistent alignment
+            global_width = self._compute_max_name_width(level_token_types)
+
+            for _type in type_order:
+                if _type not in level_token_types:
+                    continue
+                items_list = level_token_types[_type]
                 sorted_items = sorted(items_list, key=lambda x: x[0])
-                formatted_items = \
-                    self._format_items_with_descriptions(sorted_items)
+                formatted_items = self._format_items_with_descriptions(
+                    sorted_items, fixed_name_width=global_width,
+                )
                 help_str = help_str + f"Available {_type}s:\n{formatted_items}\n"
 
             if group_deprecation_warning:
@@ -361,10 +383,20 @@ class HelpProcessor:
                 else:
                     level_token_types['command'] = root_command
 
-            for _type, items_list in level_token_types.items():
+            # Define the desired order for displaying types
+            type_order = ['module', 'group', 'command']
+
+            # Compute a single width across all types for consistent alignment
+            global_width = self._compute_max_name_width(level_token_types)
+
+            for _type in type_order:
+                if _type not in level_token_types:
+                    continue
+                items_list = level_token_types[_type]
                 sorted_items = sorted(items_list, key=lambda x: x[0])
                 formatted_items = self._format_items_with_descriptions(
-                    sorted_items)
+                    sorted_items, fixed_name_width=global_width,
+                )
                 parts.append("")
                 parts.append(f"Available {_type}s:")
                 parts.append(formatted_items)
@@ -389,29 +421,74 @@ class HelpProcessor:
         return ''
 
     @staticmethod
+    def _compute_max_name_width(
+            level_token_types: dict[str, list[tuple[str, str]]],
+            min_name_width: int = 24,
+    ) -> int:
+        """
+        Compute a single max name width across all item types
+        so that groups, commands, modules align consistently.
+
+        :param level_token_types: Dict mapping type names to lists of
+            (name, description) tuples
+        :param min_name_width: Minimum width for name column
+        :return: Computed width to use for all sections
+        """
+        all_names = [
+            name
+            for items in level_token_types.values()
+            for name, _ in items
+        ]
+        if not all_names:
+            return min_name_width
+        actual_max = max(len(name) for name in all_names)
+        return max(actual_max + 1, min_name_width)
+
+    @staticmethod
     def _format_items_with_descriptions(
             items: list[tuple[str, str]],
-            max_name_width: int = 24,
+            min_name_width: int = 24,
+            fixed_name_width: int | None = None,
     ) -> str:
         """
         Format items with their descriptions in aligned columns.
 
         :param items: List of (name, description) tuples
-        :param max_name_width: Maximum width for name column
+        :param min_name_width: Minimum width for name column
+        :param fixed_name_width: If provided, use this exact width
+            (overrides auto-calculation). Used to align across sections.
         :return: Formatted string with items and descriptions
         """
         if not items:
             return ''
 
+        if fixed_name_width is not None:
+            max_name_width = fixed_name_width
+        else:
+            # Calculate actual width needed (at least min_name_width)
+            actual_max = max(len(name) for name, _ in items)
+            max_name_width = max(actual_max + 1, min_name_width)
+
         lines = []
         for name, description in items:
             if description:
+                # Clean up description (remove newlines, extra spaces)
+                description = ' '.join(description.split()).strip()
+
                 # Truncate long descriptions
                 desc_max_len = 50
                 if len(description) > desc_max_len:
-                    description = description[:desc_max_len - 3] + '...'
-                # Clean up description (remove newlines, extra spaces)
-                description = ' '.join(description.split())
+                    # Find a good breaking point (try to break at word boundary)
+                    truncate_at = desc_max_len
+                    # Look for last space before the limit
+                    last_space = description[:desc_max_len].rfind(' ')
+                    if last_space > desc_max_len - 10:  # Only if not too far back
+                        truncate_at = last_space
+
+                    # Truncate and remove trailing punctuation
+                    truncated = description[:truncate_at].rstrip('.,;:!? ')
+                    description = truncated + '...'
+
                 # Format with padding
                 padded_name = name.ljust(max_name_width)
                 lines.append(f"\t{padded_name} - {description}")
@@ -562,11 +639,12 @@ def extract_root_commands(admin_home_path):
 
     if os.path.exists(path_to_meta):
         with open(path_to_meta) as file:
-            root_commands = json.load(file)
+            content = file.read().replace('$entry_point_name', ENTRY_POINT)
+            root_commands = json.loads(content)
         return root_commands
     else:
         raise ModularCliInternalException(
-            'CLI root commands file  is missing, please write support team.'
+            'CLI root commands file  is missing, please write support team'
         )
 
 
