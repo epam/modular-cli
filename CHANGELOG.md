@@ -1,6 +1,9 @@
 CHANGELOG
 =========
 
+# [2.3.31] - 2026-05-20
+* The command output format has been improved, and the root-level commands `set_output` and `get_output` have been added to control the default output format
+
 # [2.3.30] - 2026-03-05
 * Fix inconsistent column alignment across help output sections:
   - Compute a single global column width across all item types (modules, groups, commands)

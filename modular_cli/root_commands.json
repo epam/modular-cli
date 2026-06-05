@@ -72,5 +72,24 @@
     "body": {
       "parameters": []
     }
+  },
+  "set_output": {
+    "type": "root command",
+    "description": "Set default output format for all commands",
+    "body": {
+      "parameters": [
+        {
+          "name": "format",
+          "description": "Output format CLI|TABLE|JSON"
+        }
+      ]
+    }
+  },
+  "get_output": {
+    "type": "root command",
+    "description": "Show current default output format setting",
+    "body": {
+      "parameters": []
+    }
   }
 }

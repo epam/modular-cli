@@ -99,11 +99,16 @@ CONF_API_LINK = 'api_link'
 CONF_PASSWORD = 'password'
 CONF_ACCESS_TOKEN = 'access_token'
 CONF_REFRESH_TOKEN = 'refresh_token'
+CONF_OUTPUT_VIEW = 'output_view'
 MODULAR_API_VERSION = 'version'
 ROOT_ADMIN_VERSION = 'm3admin_version'
 
 REQUIRED_PROPS = [CONF_API_LINK, CONF_USERNAME, CONF_PASSWORD]
 
+CLI_VIEW = 'cli'
+JSON_VIEW = 'json'
+TABLE_VIEW = 'table'
+VALID_OUTPUT_VIEWS = [CLI_VIEW, TABLE_VIEW, JSON_VIEW]
 
 class ConfigurationProvider:
     def __init__(self):
@@ -157,6 +162,10 @@ class ConfigurationProvider:
     def root_admin_version(self):
         return self.config_dict.get(ROOT_ADMIN_VERSION)
 
+    @property
+    def output_view(self):
+        return self.config_dict.get(CONF_OUTPUT_VIEW)
+
 
 def save_temporary_user_data(username, data):
     cur_path = Path(__file__).parent.resolve()
@@ -187,3 +196,15 @@ def add_data_to_config(name: str, value: str):
 
     with open(config_file_path, 'w') as config_file:
         yaml.dump(config, config_file)
+
+
+def set_output_view(value: str) -> str:
+    """Set default output view in configuration"""
+    value = value.lower()
+    if value not in VALID_OUTPUT_VIEWS:
+        raise ModularCliBadRequestException(
+            f"Invalid output view '{value}'. "
+            f"Valid options: {', '.join(VALID_OUTPUT_VIEWS)}"
+        )
+    add_data_to_config(CONF_OUTPUT_VIEW, value)
+    return f'Default output format set to: {value}'

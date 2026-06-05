@@ -12,12 +12,14 @@ from prettytable import PrettyTable
 
 from modular_cli import ENTRY_POINT
 from modular_cli.service.config import (
-    add_data_to_config, ROOT_ADMIN_VERSION,
+    add_data_to_config, ROOT_ADMIN_VERSION, ConfigurationProvider, CLI_VIEW,
+    TABLE_VIEW, JSON_VIEW, VALID_OUTPUT_VIEWS,
 )
 from modular_cli.service.help_client import (
     SetupCommandHandler, LoginCommandHandler, CleanupCommandHandler,
     EnableAutocompleteCommandHandler, DisableAutocompleteCommandHandler,
-    VersionCommandHandler, HealthCheckCommandHandler,
+    VersionCommandHandler, HealthCheckCommandHandler, SetOutputCommandHandler,
+    GetOutputCommandHandler,
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.utils.exceptions import (
@@ -38,13 +40,10 @@ def init_config(func):
     return wrapper
 
 
-JSON_VIEW = 'json'
-TABLE_VIEW = 'table'
 HELP_COMMAND = 'help'
 COMMAND_KEY = 'command'
 CONFIGURATION_COMMAND = 'configuration_command'
 
-CLI_VIEW = 'cli'
 ERROR_STATUS = 'FAILED'
 FILE_NAME = 'modular-cli.log'
 SUCCESS_STATUS = 'SUCCESS'
@@ -190,6 +189,8 @@ CONFIG_COMMAND_HANDLER_MAPPING = {
     'disable_autocomplete': DisableAutocompleteCommandHandler,
     'version': VersionCommandHandler,
     'health_check': HealthCheckCommandHandler,
+    'set_output': SetOutputCommandHandler,
+    'get_output': GetOutputCommandHandler,
 }
 
 
@@ -239,16 +240,18 @@ class ResponseDecorator:
         @wraps(fn)
         def decorated(*args, **kwargs):
             _FUNC_LOG = _LOG.getChild(fn.__name__)  # todo remove ?
-            view_format = CLI_VIEW
             table_format = kwargs.pop(TABLE_VIEW, False)
             json_format = kwargs.pop(JSON_VIEW, False)
-            if table_format:
-                view_format = TABLE_VIEW
-            elif json_format:
-                view_format = JSON_VIEW
+
+            view_format = self._resolve_view_format(
+                table_flag=table_format,
+                json_flag=json_format
+            )
             global VIEW_FORMAT  # there is no global
             VIEW_FORMAT = view_format
+
             resp = fn(*args, **kwargs)  # CommandResponse
+
             if not isinstance(resp, CommandResponse):
                 warn_message = ['Response is broken and does not match '
                                 'CommandResponse object']
@@ -256,14 +259,49 @@ class ResponseDecorator:
                 _FUNC_LOG.warning(warn_message)
                 resp = CommandResponse(message=resp, warnings=warn_message,
                                        code=400)
-            func_result = ResponseFormatter(function_result=resp,
-                                            view_format=view_format)
+
+            func_result = ResponseFormatter(
+                function_result=resp,
+                view_format=view_format
+            )
             response = self.stdout(func_result.prettify_response())
+
             if not ResponseFormatter.is_response_success(resp):
                 sys.exit(1)
             return response
-
         return decorated
+
+    @staticmethod
+    def _resolve_view_format(
+            table_flag: bool,
+            json_flag: bool,
+    ) -> str:
+        """
+        Resolve view format with priority:
+        1. Explicit --table flag → table
+        2. Explicit --json flag → json
+        3. User config output_view
+        4. Default (cli - adaptive view)
+        """
+        # Explicit flags take highest priority
+        if table_flag:
+            return TABLE_VIEW
+        if json_flag:
+            return JSON_VIEW
+
+        # Check user configuration
+        try:
+            config = ConfigurationProvider()
+            configured_view = config.output_view
+            if configured_view in VALID_OUTPUT_VIEWS:
+                return configured_view
+        except Exception as e:
+            _LOG.warning(f"Failed to resolve view format: {e}")
+            # If config fails, fall back to default
+            pass
+
+        # Default: CLI view (adaptive - table with JSON fallback prompt)
+        return CLI_VIEW
 
 
 class CommandResponse:
@@ -291,7 +329,7 @@ class CommandResponse:
         # determined by status code. Here this self.status not used
         self.meta = dict(kwargs)
 
-        # Only validate responses NOT from server
+        # Only validate responses NOT from server.
         # Server responses have 'Status' field and already validated
         is_server_response = self.status is not None
 
@@ -470,7 +508,8 @@ class ResponseFormatter:
                     required_width = str(response).index('\n')
                     terminal_columns = \
                         shutil.get_terminal_size(fallback=FALLBACK_SIZE).columns
-                    if required_width > terminal_columns:
+                    if (required_width > terminal_columns and
+                            self.view_format == CLI_VIEW):
                         user_input = input(CONFIRMATION_MESSAGE).lower().strip()
                         if user_input in POSITIVE_ANSWERS:
                             return self.process_json_view(status, response_meta)
