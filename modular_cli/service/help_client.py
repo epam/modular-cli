@@ -3,7 +3,7 @@ import os
 from abc import abstractmethod, ABC
 import sys
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Optional
 
 import click
 from tabulate import tabulate
@@ -14,7 +14,7 @@ from modular_cli.modular_cli_autocomplete.complete_handler import (
 )
 from modular_cli.service.config import (
     save_configuration, clean_up_configuration, add_data_to_config,
-    CONF_REFRESH_TOKEN, CONF_ACCESS_TOKEN
+    CONF_REFRESH_TOKEN, CONF_ACCESS_TOKEN, set_output_view
 )
 from modular_cli.service.initializer import init_configuration
 from modular_cli.service.utils import (
@@ -136,12 +136,12 @@ class HelpProcessor:
     @staticmethod
     def extract_subgroup_from_command_path(command_path):
         subgroup_name = None
-        splitted_command_path = command_path.split('/')
-        splitted_command_path_len = len(splitted_command_path)
-        if splitted_command_path_len == 5:
-            *_, group_name, subgroup_name, _ = splitted_command_path
+        separate_command_path = command_path.split('/')
+        separate_command_path_len = len(separate_command_path)
+        if separate_command_path_len == 5:
+            *_, group_name, subgroup_name, _ = separate_command_path
         else:
-            *_, group_name, _ = splitted_command_path
+            *_, group_name, _ = separate_command_path
         return group_name, subgroup_name
 
     @staticmethod
@@ -677,7 +677,10 @@ class AbstractStaticCommands(ABC):
     def define_description(self):
         pass
 
-    def validate_params(self, configure_args):
+    def validate_params(
+            self,
+            configure_args: dict[str, tuple[bool, type]]
+    ) -> list[bool | str | None]:
         result = []
         missing = []
         for arg, (required, arg_type) in configure_args.items():
@@ -985,7 +988,8 @@ class VersionCommandHandler(AbstractStaticCommands):
                 name, version = M3ADMIN_MODULE, self._resolve_m3admin_version()
             else:
                 name, version = next(
-                    filter(lambda x: x[0] == module, self._resolve_modules_versions(commands_meta)),
+                    filter(lambda x: x[0] == module,
+                           self._resolve_modules_versions(commands_meta)),
                     (None, None)
                 )
             if not version:
@@ -1025,3 +1029,67 @@ class VersionCommandHandler(AbstractStaticCommands):
             if self._config_warning:
                 click.echo(self._config_warning)
         sys.exit(0)
+
+
+class SetOutputCommandHandler(AbstractStaticCommands):
+    """Handler for 'set_output' configuration command"""
+
+    def define_description(self):
+        help_text = (
+            f'Description:{os.linesep}'
+            f'  Set default output format for all commands{os.linesep}'
+            f'{os.linesep}'
+            f'Usage: {ENTRY_POINT} set_output [parameters]{os.linesep}'
+            f'Parameters:{os.linesep}'
+            f'    --format,   *  Output format CLI|TABLE|JSON'
+        )
+        click.echo(help_text)
+        sys.exit(0)
+
+    def execute_command(self):
+        from modular_cli.service.decorators import CommandResponse
+
+        configure_args = {
+            '--format': (True, str),
+        }
+
+        # Check if format argument provided
+        for param_name, is_required in configure_args.items():
+            if param_name not in self.config_params:
+                self.define_description()
+
+        output_format, = self.validate_params(configure_args=configure_args, )
+
+        try:
+            response = set_output_view(output_format)
+            return CommandResponse(message=response)
+        except ModularCliBadRequestException as e:
+            return CommandResponse(message=str(e), code=400)
+
+
+class GetOutputCommandHandler(AbstractStaticCommands):
+    """Handler for 'get_output' configuration command"""
+
+    def define_description(self):
+        help_text = (
+            f'{os.linesep}Usage: {ENTRY_POINT} get_output'
+            f'{os.linesep}{os.linesep}'
+            f'Show current default output format setting'
+        )
+        click.echo(help_text)
+        sys.exit(0)
+
+    def execute_command(self):
+        from modular_cli.service.decorators import CommandResponse
+
+        try:
+            config = ConfigurationProvider()
+            current = config.output_view
+            return CommandResponse(
+                message=f'Current default output format: {current}'
+            )
+        except ModularCliConfigurationException:
+            return CommandResponse(
+                message=f'Current default output format: cli '
+                        f'(default - not configured)'
+            )
