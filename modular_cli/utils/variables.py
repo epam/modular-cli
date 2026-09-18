@@ -24,5 +24,11 @@ ENV_CLI_DEBUG = 'MODULAR_CLI_DEBUG'
 
 M3ADMIN_MODULE = 'm3admin'
 
+DEFAULT_DOCS_URL = 'https://github.com/Maestro-Cloud-Control/m3-docs'
+DOCS_HELP_LINE = (
+    f'Documentation: {DEFAULT_DOCS_URL} '
+    'Maestro tool guides, architecture, and administration docs'
+)
+
 MISSING_CONFIGURATION_MESSAGE = \
     f"The configuration is missing. Use '{ENTRY_POINT} setup' command first"

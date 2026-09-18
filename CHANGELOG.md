@@ -1,6 +1,16 @@
 CHANGELOG
 =========
 
+# [4.4.2] - 2026-08-26
+* Add a documentation line to `--help` pointing at the Maestro docs catalog:
+  https://github.com/Maestro-Cloud-Control/m3-docs
+
+# [4.4.1] - 2026-07-30
+* Fix `CommandResponse` consuming domain-specific `status` fields from modular-api responses:
+  - Only treat `SUCCESS` / `FAILED` (and lowercase variants) as HTTP operation status
+  - Preserve business fields such as STM voiceover `status: up_to_date` in JSON `meta`
+  - Add `_split_operation_status()` helper in `modular_cli.service.decorators`
+
 # [4.4.0] - 2026-05-28
 * Python 3.14 compatibility: set upper bound `requires-python = ">=3.14,<4"` and update Pyright target to `3.14`
 * Relax dependency version constraints from pinned versions to compatible ranges to reduce installation conflicts:

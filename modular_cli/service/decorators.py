@@ -311,6 +311,33 @@ class HintType(TypedDict):
     description: str
 
 
+_OPERATION_STATUSES = frozenset({SUCCESS_STATUS, ERROR_STATUS, 'success', 'failed'})
+
+
+def _split_operation_status(kwargs: dict) -> tuple[str | None, dict]:
+    """
+    Pop modular-api operation status (SUCCESS/FAILED) from kwargs.
+
+    Domain-specific fields such as voiceover ``status: up_to_date`` must stay
+    in meta; only HTTP-layer status values are removed from extras.
+    """
+    raw_status = kwargs.pop('status', None)
+    raw_Status = kwargs.pop('Status', None)
+
+    if raw_status in _OPERATION_STATUSES:
+        return raw_status, kwargs
+    if raw_Status in _OPERATION_STATUSES:
+        if raw_status is not None:
+            kwargs['status'] = raw_status
+        return raw_Status, kwargs
+
+    if raw_status is not None:
+        kwargs['status'] = raw_status
+    if raw_Status is not None:
+        kwargs['Status'] = raw_Status
+    return None, kwargs
+
+
 class CommandResponse:
     def __init__(
             self,
@@ -332,8 +359,7 @@ class CommandResponse:
         self.items = items
         self.table_title = table_title
         self.hints = hints if hints is not None else kwargs.pop('hints', None)
-        # Remove status from meta
-        self.status = kwargs.pop('status', None) or kwargs.pop('Status', None)
+        self.status, kwargs = _split_operation_status(kwargs)
         # modular-api provides status of operation which can always be
         # determined by status code. Here this self.status not used
         self.meta = dict(kwargs)
