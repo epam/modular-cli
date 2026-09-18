@@ -5,6 +5,7 @@ import shutil
 import sys
 from functools import wraps
 from http import HTTPStatus
+from typing import TypedDict
 
 import click
 import yaml
@@ -304,6 +305,12 @@ class ResponseDecorator:
         return CLI_VIEW
 
 
+class HintType(TypedDict):
+    index: int
+    title: str
+    description: str
+
+
 class CommandResponse:
     def __init__(
             self,
@@ -312,6 +319,7 @@ class CommandResponse:
             items: list | None = None,
             warnings=None,
             table_title=None,
+            hints: list[HintType] | None = None,
             **kwargs
     ):
         """
@@ -323,6 +331,7 @@ class CommandResponse:
         self.warnings = warnings or []
         self.items = items
         self.table_title = table_title
+        self.hints = hints if hints is not None else kwargs.pop('hints', None)
         # Remove status from meta
         self.status = kwargs.pop('status', None) or kwargs.pop('Status', None)
         # modular-api provides status of operation which can always be
@@ -362,6 +371,31 @@ class ResponseFormatter:
         return f'{os.linesep}WARNINGS:{os.linesep}' + \
                f'{os.linesep}'.join(str(i + 1) + '. ' + warnings[i]
                                     for i in range(len(warnings)))
+
+    @staticmethod
+    def _format_hints(hints: list[HintType]) -> str:
+        ordered = sorted(hints, key=lambda h: h.get('index', 0))
+        lines = ['Hints:']
+        for hint in ordered:
+            lines.append(f"  {hint.get('title', '')}:")
+            description = hint.get('description', '')
+            if '\n' in description:
+                for command_line in description.splitlines():
+                    lines.append(f'    {command_line}')
+            else:
+                lines.append(f'    {description}')
+            lines.append('')
+        while lines and lines[-1] == '':
+            lines.pop()
+        return os.linesep.join(lines)
+
+    def _append_hints(self, response: str, response_meta: CommandResponse) -> str:
+        if response_meta.hints:
+            response += (
+                f'{os.linesep}{os.linesep}'
+                f'{self._format_hints(response_meta.hints)}'
+            )
+        return response
 
     @staticmethod
     def is_response_success(response_meta: CommandResponse):
@@ -406,7 +440,7 @@ class ResponseFormatter:
             result_message = f'Response:{os.linesep}{message}'
             if warnings:
                 result_message += self._prettify_warnings(warnings)
-            return result_message
+            return self._append_hints(result_message, response_meta)
 
     def process_json_view(self, status: str, response_meta: CommandResponse):
         if status == ERROR_STATUS:
@@ -423,21 +457,21 @@ class ResponseFormatter:
             success_code, warnings, message, items, table_title = \
                 self.unpack_success_result_values(response_meta=response_meta)
             if table_title and items:
-                return json.dumps({
+                return self._append_hints(json.dumps({
                     MODULAR_CLI_STATUS: status,
                     MODULAR_CLI_CODE: success_code,
                     MODULAR_CLI_TABLE_TITLE: table_title,
                     MODULAR_CLI_ITEMS: items,
                     MODULAR_CLI_WARNINGS: warnings,
-                    MODULAR_CLI_META: response_meta.meta
-                }, indent=4)
-            return json.dumps({
+                    MODULAR_CLI_META: response_meta.meta,
+                }, indent=4), response_meta)
+            return self._append_hints(json.dumps({
                 MODULAR_CLI_STATUS: status,
                 MODULAR_CLI_CODE: success_code,
                 MODULAR_CLI_MESSAGE: message,
                 MODULAR_CLI_WARNINGS: warnings,
-                MODULAR_CLI_META: response_meta.meta
-            }, indent=4)
+                MODULAR_CLI_META: response_meta.meta,
+            }, indent=4), response_meta)
 
     def process_table_view(
             self,
@@ -530,7 +564,7 @@ class ResponseFormatter:
             if response_meta.warnings:
                 response += self._prettify_warnings(response_meta.warnings)
 
-        return response
+        return self._append_hints(response, response_meta)
 
     def prettify_response(self):
         status = SUCCESS_STATUS if self.is_response_success(

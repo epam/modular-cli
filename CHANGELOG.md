@@ -1,7 +1,17 @@
 CHANGELOG
 =========
 
+# [4.4.0] - 2026-05-28
+* Python 3.14 compatibility: set upper bound `requires-python = ">=3.14,<4"` and update Pyright target to `3.14`
+* Relax dependency version constraints from pinned versions to compatible ranges to reduce installation conflicts:
+  - `click==8.3.0` -> `click>=8.3,<9`
+  - `tabulate==0.9.0` -> `tabulate>=0.9,<1`
+  - `requests==2.32.4` -> `requests>=2.32,<3`
+  - `prettytable==3.9.0` -> `prettytable>=3.16.0,<4`
+* Bump `PyYAML` from `6.0.1` to `6.0.2`
+
 # [2.3.31] - 2026-05-20
+* Add ability to display hints
 * The command output format has been improved, and the root-level commands `set_output` and `get_output` have been added to control the default output format
 
 # [2.3.30] - 2026-03-05
@@ -20,7 +30,7 @@ CHANGELOG
   - Clean up descriptions (remove newlines and extra spaces) before display
   - Ensure proper alignment of command descriptions in help listings
 * Fix help output display order:
-  - Enforce consistent hierarchical type order: modules → groups → commands
+  - Enforce consistent hierarchical type order: modules -> groups -> commands
   - Apply ordering to both root help and group-level help displays
   - Fix issue where groups could appear after commands in listings
 
