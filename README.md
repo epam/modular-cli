@@ -1,6 +1,6 @@
-## Table of Contents
+# Table of Contents
 
-- [Introduction](#introduction)
+- [Preface](#preface)
 1. [General Information](#1-general-information)
    - [Key Features](#key-features)
    - [Architecture Overview](#architecture-overview)
@@ -48,7 +48,7 @@
 
 [//]: # ({{ pagebreak }})
 
-## Introduction
+# Preface
 
 ### About This Guide
 
@@ -75,7 +75,7 @@ This guide is designed for:
 
 [//]: # ({{ pagebreak }})
 
-## 1. General Information
+# 1. General Information
 
 Modular-CLI is a specialized command-line interface tool for interacting with [Modular-API](https://github.com/epam/modular-api). It provides a seamless way to execute commands, manage resources, and interact with multiple modules through a unified CLI interface.
 
@@ -108,7 +108,7 @@ Before using Modular-CLI, ensure you have:
 
 | Requirement                   | Description                                   |
 |-------------------------------|-----------------------------------------------|
-| **Python 3.10+**              | Python interpreter installed                  |
+| **Python 3.14**               | Python interpreter installed                  |
 | **pip**                       | Package manager for Python                    |
 | **Active Modular-API server** | Server must be running and network accessible |
 | **Valid user credentials**    | Username and password from administrator      |
@@ -120,11 +120,11 @@ Before using Modular-CLI, ensure you have:
 
 [//]: # ({{ pagebreak }})
 
-## 2. Installation and Configuration
+# 2. Installation and Configuration
 
 ### Prerequisites
 
-Download and install Python 3.10 or higher:
+Download and install Python 3.14:
 
 * [Python for Windows](https://www.python.org/downloads/windows/)
 * [Python for Linux](https://docs.python-guide.org/starting/install3/linux/)
@@ -134,7 +134,7 @@ Verify installation:
 
 ```bash
 python --version
-# Expected: Python 3.10.x or higher
+# Expected: Python 3.14 or higher
 
 pip --version
 # Expected: pip 21.x or higher
@@ -149,7 +149,7 @@ pip --version
 **On Linux/Mac:**
 
 ```bash
-python3.10 -m venv modular_cli_venv
+python3.14 -m venv modular_cli_venv
 source modular_cli_venv/bin/activate
 ```
 
@@ -288,7 +288,7 @@ Modular-CLI stores configuration in the following locations:
 
 [//]: # ({{ pagebreak }})
 
-## 3. Authentication and Authorization
+# 3. Authentication and Authorization
 
 ### Login Process
 
@@ -402,7 +402,7 @@ modular_cli tenant deactivate_region --tenant AWS-MSTR-DEV --cloud AWS --all_reg
 
 [//]: # ({{ pagebreak }})
 
-## 4. Command Usage
+# 4. Command Usage
 
 ### Command Structure
 
@@ -442,7 +442,7 @@ modular_cli [group] [subgroup] --help # Show commands within a subgroup
 
 ### Built-in Commands
 
-#### Setup - Configure Connection
+#### setup - Configure Connection
 
 ```bash
 modular_cli setup --username <USER> --password <PASS> --api_path <URL>
@@ -465,7 +465,7 @@ modular_cli setup \
   --api_path https://modular.company.com/integration
 ```
 
-#### Login - Authenticate and Refresh Commands
+#### login - Authenticate and Refresh Commands
 
 ```bash
 modular_cli login
@@ -480,7 +480,7 @@ Response:
 Login successful
 ```
 
-#### Cleanup - Remove Configuration
+#### cleanup - Remove Configuration
 
 ```bash
 modular_cli cleanup
@@ -495,7 +495,7 @@ Response:
 Configuration for the CLI tool 'modular_cli' has been deleted
 ```
 
-#### Version - Display Version Information
+#### version - Display Version Information
 
 ```bash
 modular_cli version --detailed
@@ -541,7 +541,7 @@ Chef: 1.0.2
 M3admin: 4.150.5
 ```
 
-#### Health Check - Check API Server Status
+#### health_check - Check API Server Status
 
 ```bash
 modular_cli health_check
@@ -575,6 +575,7 @@ Options:
 
 Available modules:
   chef
+  stm
 
 Available groups:
   application
@@ -583,6 +584,8 @@ Available groups:
   azure
   configure
   enterprise
+  environment
+  google
   ...
 
 Available commands:
@@ -702,7 +705,7 @@ Most commands support these common parameters:
 
 [//]: # ({{ pagebreak }})
 
-## 5. Output Formats
+# 5. Output Formats
 
 Modular-CLI supports three output formats: plain text (default), JSON, and table.
 
@@ -900,7 +903,7 @@ All responses follow this structure:
 
 [//]: # ({{ pagebreak }})
 
-## 6. Autocomplete
+# 6. Autocomplete
 
 Modular-CLI supports command autocompletion for enhanced productivity on Unix-based systems (Linux and macOS).
 
@@ -1054,7 +1057,7 @@ sudo ln -s /path/to/venv/bin/modular_cli /usr/local/bin/modular_cli
 
 [//]: # ({{ pagebreak }})
 
-## 7. Advanced Configuration
+# 7. Advanced Configuration
 
 ### Environment Variables
 
@@ -1209,7 +1212,7 @@ Debug output includes:
 
 [//]: # ({{ pagebreak }})
 
-## 8. Modular-CLI Schema
+# 8. Modular-CLI Schema
 
 ### Architecture Diagram
 
@@ -1237,8 +1240,6 @@ Debug output includes:
 7. Modular-API executes command on backend module
 8. Modular-API returns response
 9. CLI formats and displays response
-
-[//]: # ({{ pagebreak }})
 
 ### Component Interaction
 
@@ -1300,7 +1301,7 @@ Debug output includes:
 
 [//]: # ({{ pagebreak }})
 
-## 9. Annexes
+# 9. Annexes
 
 <a name="annex-1-common-use-cases"></a>
 
@@ -1322,7 +1323,7 @@ This annex provides real-world examples and workflows for common Modular-CLI tas
 **Step 1: Create Virtual Environment**
 
 ```bash
-python3.10 -m venv ~/.venv/modular_cli
+python3.14 -m venv ~/.venv/modular_cli
 source ~/.venv/modular_cli/bin/activate
 ```
 
@@ -2114,7 +2115,7 @@ cat ~/.modular_cli/credentials > config_info.txt
 
 [//]: # ({{ pagebreak }})
 
-## 10. Project Information
+# 10. Project Information
 
 ### Project Links
 
@@ -2138,7 +2139,7 @@ cat ~/.modular_cli/credentials > config_info.txt
 |--------------------|-------------------------------------------------------|
 | **Email**          | SupportSyndicateTeam@epam.com                         |
 | **Response Time**  | 7 calendar days (5 business days, excluding weekends) |
-| **Python Version** | 3.10+                                                 |
+| **Python Version** | 3.14                                                  |
 
 ### How to Report an Issue
 
@@ -2162,7 +2163,7 @@ Subject: Authentication fails with SSL error
 
 Environment:
 - OS: Ubuntu 22.04
-- Python: 3.10.12
+- Python: 3.14.5
 - Modular-CLI: 2.3.15
 - Modular-API: 4.3.8
 - Shell: bash
@@ -2216,4 +2217,12 @@ python --version
 pip --version
 ```
 
+### License
+
+Please refer to the project repository for licensing information.
+
 [Content ↑](#table-of-contents)
+
+**Last Updated**: June 2026  
+**Document Version**: 2.0.0  
+**Company**: EPAM
