@@ -18,6 +18,11 @@ dependencies = [
     "shellingham==1.5.4"
 ]
 
+[project.optional-dependencies]
+dev = [
+    "pytest>=9,<10",
+]
+
 #[project.scripts]
 #modular-cli = "modular_cli.modular_cli:modular_cli"
 
@@ -42,3 +47,13 @@ exclude = [
 ]
 pythonVersion = "3.14"
 reportIncompatibleMethodOverride = "warning"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = [
+    "-ra",
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]

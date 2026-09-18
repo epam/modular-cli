@@ -440,6 +440,8 @@ modular_cli [group] --help            # Show commands within a specific group
 modular_cli [group] [subgroup] --help # Show commands within a subgroup
 ```
 
+Every `--help` screen includes a documentation line that points at the [Maestro docs catalog](https://github.com/Maestro-Cloud-Control/m3-docs). That README and [`index.md`](https://github.com/Maestro-Cloud-Control/m3-docs/blob/main/index.md) map to the tool, architecture, and administration guides.
+
 ### Built-in Commands
 
 #### setup - Configure Connection
@@ -569,6 +571,7 @@ Expected output:
 ```
 Description: Here are the commands supported by the current version of modular_cli
 IMPORTANT: The scope of commands you can execute depends on your user permissions
+Documentation: https://github.com/Maestro-Cloud-Control/m3-docs Maestro tool guides, architecture, and administration docs
 Usage: modular_cli [module] group [subgroup] command [parameters]
 Options:
   --help     Show this message and exit
@@ -608,6 +611,7 @@ Expected output:
 ```
 Description: Here are the commands supported by the current version of modular_cli.
 IMPORTANT: The scope of commands you can execute depends on your user permissions
+Documentation: https://github.com/Maestro-Cloud-Control/m3-docs Maestro tool guides, architecture, and administration docs
 Usage: modular_cli [module] group [subgroup] command [parameters]
 Options:
   --help     Show this message and exit
@@ -640,6 +644,7 @@ Expected output:
 Description: 
     Lists tenants by certain filters.
     
+Documentation: https://github.com/Maestro-Cloud-Control/m3-docs Maestro tool guides, architecture, and administration docs
 Usage: modular_cli tenant describe [parameters]
 Parameters:
     --tenant,              -tn,     Apply filter by tenant display name

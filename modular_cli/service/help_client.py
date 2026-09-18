@@ -25,7 +25,7 @@ from modular_cli.service.utils import (
 )
 from modular_cli.utils.logger import get_logger
 from modular_cli.utils.variables import (
-    M3ADMIN_MODULE, MISSING_CONFIGURATION_MESSAGE,
+    M3ADMIN_MODULE, MISSING_CONFIGURATION_MESSAGE, DOCS_HELP_LINE,
 )
 from modular_cli.utils.exceptions import (
     ModularCliBadRequestException, ModularCliInternalException,
@@ -43,6 +43,7 @@ HELP_STUB = (
     f'Here are the commands supported by the current version of {ENTRY_POINT} '
     f'\nIMPORTANT: The scope of commands you can execute depends on your user '
     f'permissions'
+    f'\n{DOCS_HELP_LINE}'
 )
 
 GENERAL_HELP_STRING = """Description: {help_stub}
@@ -53,6 +54,7 @@ Options:
 """
 
 COMMAND_HELP_STRING = """Description: {command_description}
+{docs_help_line}
 Usage: {entry_point} {usage} [parameters]
 Parameters:
 {parameters}
@@ -594,6 +596,7 @@ class HelpProcessor:
             command_description=command_description,
             usage=' '.join(specified_tokens),
             parameters=pretty_params,
+            docs_help_line=DOCS_HELP_LINE,
         )
 
         return combined_warning + help_string
